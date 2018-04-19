@@ -2,6 +2,8 @@
 #include <stack>
 #include <vector>
 #include <random>
+#include <set>
+#include <algorithm>
 
 #include <cstdlib>
 #include <cassert>
@@ -13,7 +15,7 @@
 #include "btree.hpp"
 
 static const unsigned int DISK_SIZE = 8 * 1024 * 1024;
-static const unsigned int PAGE_SIZE = 4096;
+static const unsigned int PAGE_SIZE = 128;
 
 class mem_abstio : public brufs::abstio {
 private:
@@ -51,6 +53,7 @@ public:
     }
 
     const char *strstatus(brufs::ssize eno) const override {
+        (void) eno;
         return "unknown error";
     }
 
@@ -62,9 +65,11 @@ public:
 static std::stack<brufs::address> free_pages;
 
 static brufs::status allocate_test_page(brufs::brufs &fs, brufs::size size, brufs::extent &target) {
+    (void) fs;
+
     if (free_pages.empty()) return brufs::status::E_NO_SPACE;
 
-    assert(size == PAGE_SIZE);
+    // assert(size == PAGE_SIZE);
 
     target.offset = free_pages.top();
     target.length = size;
@@ -81,7 +86,7 @@ TEST_CASE("Bm+trees can be inserted into and removed from", "[btree]") {
     brufs::disk disk(&io);
     brufs::brufs fs(&disk);
 
-    for (auto i = 1; i < (DISK_SIZE / PAGE_SIZE); ++i) {
+    for (unsigned int i = 1; i < (DISK_SIZE / PAGE_SIZE); ++i) {
         free_pages.push(i * PAGE_SIZE);
     }
 
@@ -123,19 +128,50 @@ TEST_CASE("Bm+trees can be inserted into and removed from", "[btree]") {
     }
 
     SECTION("can insert and query again many times") {
-        for (long i = 100000; i >= -100000; --i) {
+        for (long i = 0; i < 2400; ++i) {
             CAPTURE(i);
-            brufs::status status = tree.insert(i, i * i);
+            brufs::status status = tree.insert(i, i + 14616742);
             if (status != brufs::status::OK) printf("%s\n", brufs::strerror(status));
             REQUIRE(status == brufs::status::OK);
         }
 
-        for (long i = -100000; i <= 100000; ++i) {
+        if (0) {
+            char fbuf[256];
+            snprintf(fbuf, 256, "trees/tree-%lu-filled.puml", time(NULL));
+            FILE *f = fopen(fbuf, "w");
+
+            fprintf(f, "@startuml\nskinparam classBackgroundColor PeachPuff/PaleGoldenrod\n");
+
+            char ppbuf[65536];
+            tree.pretty_print_root(ppbuf, 65536);
+            fprintf(f, "%s", ppbuf);
+
+            fprintf(f, "hide empty fields\nhide empty methods\nhide << value >> stereotype\nhide << value >> circle\n@enduml\n");
+            fclose(f);
+        }
+
+        for (long i = 0; i < 2400; ++i) {
             CAPTURE(i);
             long value;
-            REQUIRE(tree.remove(i, value) == brufs::status::OK);
-            REQUIRE(value == i * i);
-            REQUIRE(tree.search(i, value) == brufs::status::E_NOT_FOUND);
+            brufs::status status = tree.remove(i, value);
+            if (status < 0) printf("%s\n", brufs::strerror(status));
+
+            // char fbuf[256];
+            // snprintf(fbuf, 256, "trees/tree-%lu-%ld.puml", time(NULL), i);
+            // FILE *f = fopen(fbuf, "w");
+
+            // fprintf(f, "@startuml\nskinparam classBackgroundColor PeachPuff/PaleGoldenrod\n");
+
+            // char ppbuf[65536];
+            // tree.pretty_print_root(ppbuf, 65536);
+            // fprintf(f, "%s", ppbuf);
+
+            // fprintf(f, "hide empty fields\nhide empty methods\nhide << value >> stereotype\nhide << value >> circle\n@enduml\n");
+            // fclose(f);
+
+            REQUIRE(status == brufs::status::OK);
+            REQUIRE(value == i + 14616742);
+            REQUIRE(tree.search(i, value, true) == brufs::status::E_NOT_FOUND);
         }
 
         brufs::size count;
@@ -151,12 +187,20 @@ TEST_CASE("Bm+trees can be inserted into and removed from", "[btree]") {
         struct kv {
             long k;
             long v;
+
+            auto operator==(const kv &other) const { 
+                return this->k == other.k && this->v == other.v; 
+            }
+
+            auto operator<(const kv &other) const {
+                return this->k < other.k || (this->k == other.k && this->v < other.v);
+            }
         };
 
         std::vector<kv> kvs;
 
-        for (long i = 0; i < 2400; ++i) {
-            kvs.push_back(kv {rand(), rand()});
+        for (long i = 0; i < 24; ++i) {
+            kvs.push_back(kv {rand() % 4, rand() % 4});
         }
 
         std::shuffle(kvs.begin(), kvs.end(), reng);
@@ -168,12 +212,23 @@ TEST_CASE("Bm+trees can be inserted into and removed from", "[btree]") {
 
         std::shuffle(kvs.begin(), kvs.end(), reng);
 
+        std::set<kv> results;
+
         for (const auto kv : kvs) {
             CAPTURE(kv.k);
             long value;
-            REQUIRE(tree.remove(kv.k, value) == brufs::status::OK);
-            REQUIRE(value == kv.v);
+
+            brufs::status status = tree.remove(kv.k, value);
+            if (status < 0) printf("%s\n", brufs::strerror(status));
+            REQUIRE(status == brufs::status::OK);
+
+            results.insert({ kv.k, value });
         }
+
+        std::set<kv> vset;
+        vset.insert(kvs.begin(), kvs.end());
+
+        REQUIRE(std::includes(vset.begin(), vset.end(), results.begin(), results.end()));
 
         brufs::size count;
         REQUIRE(tree.count_values(count) == brufs::status::OK);

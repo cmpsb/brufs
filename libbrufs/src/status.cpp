@@ -38,6 +38,8 @@ const char *brufs::strerror(status eno) {
         case E_NOT_FOUND: return "E_NOT_FOUND";
         case E_TOO_MANY_RETRIES: return "E_TOO_MANY_RETRIES";
         case E_AT_MAX_LEVEL: return "E_AT_MAX_LEVEL";
+        case E_CANT_ADOPT: return "E_CANT_ADOPT";
+        case E_MISALIGNED: return "E_MISALIGNED";
         case E_ABSTIO_BASE: return "E_ABSTIO_BASE";
         case OK: return "OK";
         case RETRY: return "RETRY";

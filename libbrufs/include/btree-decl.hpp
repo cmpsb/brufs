@@ -48,25 +48,31 @@ static status ALLOC_NORMAL(brufs &fs, size length, extent &target) {
  */
 struct header {
     /**
+     * The magic header "B+" marking this as a Bm+tree.
+     */
+    uint8_t magic[2];
+
+    /**
      * The current level, 0 if this is a node of leaves.
      */
     uint8_t level;
 
     /**
-     * Unused. Set to 0.
+     * Size of the header in bytes. Must be a multiple of 8.
      */
-    uint8_t unused8;
-
-    /**
-     * Unused. Set to 0.
-     */
-    uint16_t unused16;
+    uint8_t size;
 
     /**
      * The number of keys in the current node.
      */
     uint32_t num_values;
+
+    header(uint8_t level = 0, uint32_t num_values = 0) : 
+        magic {'B', '+'}, level(level), size(sizeof(header)), num_values(num_values)
+    {}
 };
+static_assert(std::is_standard_layout<header>::value);
+static_assert(sizeof(header) % 8 == 0);
 
 template <typename K, typename V, allocator A>
 class node;
@@ -131,11 +137,11 @@ public:
 
     status init();
 
-    status search(const K key, V &value);
+    status search(const K key, V &value, bool strict = false);
 
     status insert(const K key, const V value);
 
-    status remove(const K key, V &value);
+    status remove(const K key, V &value, bool strict = false);
 
     status count_values(size &count);
 
@@ -311,19 +317,30 @@ struct node {
     status locate_in_leaf(const K &key, unsigned int &result);
 
     /**
+     * Finds the index of the exact match for the search key.
+     * 
+     * @param key the key to search for
+     * @param result where to store the index
+     * 
+     * @return E_NOT_FOUND if no match could be found, OK otherwise
+     */
+    status locate_in_leaf_strict(const K &key, unsigned int &result);
+
+    /**
      * Looks up the value associated with the key.
      * 
      * @param key the key to search for
      * @param value where to store the value
+     * @param strict whether to only return success if the key matches exactly
      * 
      * @return a status code; OK if the key was found, E_NOT_FOUND if it wasn't
      */
-    status search(const K &key, V &value);
+    status search(const K &key, V &value, bool strict);
 
     status insert_initial(const K &key, address left, address right);
 
     template <typename R>
-    status split();
+    status split(const K &key, const R &value);
 
     /**
      * Inserts a value in this node, without walking the rest of the tree.
@@ -335,7 +352,7 @@ struct node {
      * @return a status code
      */
     template <typename R>
-    status insert_direct(const K &key, const R &value, bool reload = true);
+    status insert_direct(const K &key, const R &value);
 
     /**
      * Inserts a value in this part of the (sub-)tree.
@@ -347,13 +364,16 @@ struct node {
      */
     status insert(const K &key, const V &value);
 
-    status remove(const K &key, V &value);
+    status remove(const K &key, V &value, bool strict);
 
     template <typename R>
     status adopt(node *adoptee);
 
     template <typename R>
-    status abduct_highest(node *node);
+    status abduct_highest(node &node);
+
+    template <typename R>
+    status abduct_lowest(node &node);
 
     template <typename R>
     status remove_direct(unsigned int idx);

@@ -24,6 +24,9 @@
 
 #include "rtstructures.hpp"
 
+#include <cstdio>
+#include <ctime>
+
 namespace brufs { namespace bmtree {
 
 template <typename K, typename V, allocator A>
@@ -67,6 +70,7 @@ status bmtree<K, V, A>::init() {
 
     node<K, V, A> new_root(this->fs, root_extent.offset, this->length, this);
     memset(new_root.buf, 0, this->length);
+    new (new_root.hdr) header;
 
     status = new_root.store();
     if (status < 0) {
@@ -75,35 +79,41 @@ status bmtree<K, V, A>::init() {
     }
 
     this->update_root(root_extent.offset);
-    return status::OK;
+
+    return this->root.load();
 }
 
 template <typename K, typename V, allocator A>
-status bmtree<K, V, A>::search(const K key, V &value) {
-    return this->root.search(key, value);
+status bmtree<K, V, A>::search(const K key, V &value, bool strict) {
+    status status = this->root.load();
+    if (status < 0) return status;
+
+    return this->root.search(key, value, strict);
 }
 
 template <typename K, typename V, allocator A>
 status bmtree<K, V, A>::insert(const K key, const V value) {
-    for (unsigned int attempt = 0; attempt < this->max_level; ++attempt) {
-        status status = this->root.insert(key, value);
+    status stt = this->root.load();
+    if (stt < 0) return stt;
 
-        if (status == status::RETRY) continue;
-        return status;
-    }
-
-    return status::E_AT_MAX_LEVEL;
+    return this->root.insert(key, value);
 }
 
 template <typename K, typename V, allocator A>
-status bmtree<K, V, A>::remove(const K key, V &value) {
-    return this->root.remove(key, value);
+status bmtree<K, V, A>::remove(const K key, V &value, bool strict) {
+    status status = this->root.load();
+    if (status < 0) return status;
+
+    return this->root.remove(key, value, strict);
 }
 
 template <typename K, typename V, allocator A>
 status bmtree<K, V, A>::count_values(size &count) {
+    status status = this->root.load();
+    if (status < 0) return status;
+
     address leaf_addr;
-    status status = this->root.get_last_leaf(leaf_addr);
+    status = this->root.get_last_leaf(leaf_addr);
     if (status < 0) return status;
 
     count = 0;
@@ -123,6 +133,8 @@ status bmtree<K, V, A>::count_values(size &count) {
 
 template <typename K, typename V, allocator A>
 int bmtree<K, V, A>::pretty_print_root(char *buf, size len) {
+    this->root.load();
+
     return this->root.pretty_print(buf, len, false);
 }
 

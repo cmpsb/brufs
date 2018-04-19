@@ -99,6 +99,11 @@ enum status {
     E_CANT_ADOPT,
 
     /**
+     * The data structure or its size is misaligned or causes other structures to be misaligned.
+     */
+    E_MISALIGNED,
+
+    /**
      * Not a real error, but rather the lowest possible I/O abstraction status code
      */
     E_ABSTIO_BASE = INT_MIN >> 1,

@@ -2,12 +2,15 @@
 #include <stack>
 #include <vector>
 #include <random>
+#include <set>
+#include <algorithm>
 
 #include <cstdlib>
 #include <cassert>
 #include <cstring>
 #include <cstdio>
 #include <ctime>
+#include <cmath>
 
 #include "catch.hpp"
 
@@ -135,7 +138,7 @@ TEST_CASE("Bm+trees can be inserted into and queried", "[btree]") {
     // SECTION("can insert and query again many times") {
     //     for (long i = 1000000; i >= -1000000; --i) {
     //         CAPTURE(i);
-    //         brufs::status status = tree.insert(i, i * i);
+    //         brufs::status status = tree.insert(i, i + 14616742);
     //         if (status != brufs::status::OK) printf("%s\n", brufs::strerror(status));
     //         REQUIRE(status == brufs::status::OK);
     //     }
@@ -148,7 +151,7 @@ TEST_CASE("Bm+trees can be inserted into and queried", "[btree]") {
     //         CAPTURE(i);
     //         long value;
     //         REQUIRE(tree.search(i, value) == brufs::status::OK);
-    //         REQUIRE(value == i * i);
+    //         REQUIRE(value == i + 14616742);
     //     }
     // }
 
@@ -160,6 +163,14 @@ TEST_CASE("Bm+trees can be inserted into and queried", "[btree]") {
         struct kv {
             long k;
             long v;
+
+            auto operator==(const kv &other) const { 
+                return this->k == other.k && this->v == other.v; 
+            }
+
+            auto operator<(const kv &other) const {
+                return this->k < other.k || (this->k == other.k && this->v < other.v);
+            }
         };
 
         std::vector<kv> kvs;
@@ -170,39 +181,40 @@ TEST_CASE("Bm+trees can be inserted into and queried", "[btree]") {
 
         std::shuffle(kvs.begin(), kvs.end(), reng);
 
-        unsigned int idx = 0;
-        unsigned long gen = time(NULL);
-
         for (const auto kv : kvs) {
-            char fbuf[256];
-            snprintf(fbuf, 256, "trees/tree-%lu-%u.puml", gen, idx);
-            FILE *f = fopen(fbuf, "w");
-
-            fprintf(f, "@startuml\n");
-
-            char ppbuf[65536];
-            tree.pretty_print_root(ppbuf, 65536);
-            fprintf(f, "%s", ppbuf);
-
-            fprintf(f, "hide empty fields\nhide empty methods\n@enduml\n");
-            fclose(f);
-
-            printf("nnodes: %u\n", tree.root);
-
             brufs::status status = tree.insert(kv.k, kv.v);
             REQUIRE(status == brufs::status::OK);
-
-            ++idx;
         }
 
+        // I don't usually leave commented code around, but this is too good to delete for now :D
+        // char fbuf[256];
+        // snprintf(fbuf, 256, "trees/tree-%lu.puml", gen);
+        // FILE *f = fopen(fbuf, "w");
+
+        // fprintf(f, "@startuml\nskinparam classBackgroundColor PeachPuff/PaleGoldenrod\n");
+
+        // char ppbuf[65536];
+        // tree.pretty_print_root(ppbuf, 65536);
+        // fprintf(f, "%s", ppbuf);
+
+        // fprintf(f, "hide empty fields\nhide empty methods\nhide << value >> stereotype\nhide << value >> circle\n@enduml\n");
+        // fclose(f);
+
         std::shuffle(kvs.begin(), kvs.end(), reng);
+
+        std::set<kv> results;
 
         for (const auto kv : kvs) {
             CAPTURE(kv.k);
             long value;
             REQUIRE(tree.search(kv.k, value) == brufs::status::OK);
-            REQUIRE(value == kv.v);
+            results.insert({ kv.k, value });
         }
+
+        std::set<kv> vset;
+        vset.insert(kvs.begin(), kvs.end());
+
+        REQUIRE(std::includes(vset.begin(), vset.end(), results.begin(), results.end()));
 
         brufs::size count;
         REQUIRE(tree.count_values(count) == brufs::status::OK);

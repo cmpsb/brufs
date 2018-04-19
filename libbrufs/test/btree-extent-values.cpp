@@ -74,7 +74,7 @@ static brufs::status allocate_test_page(brufs::brufs &fs, brufs::size size, bruf
     return brufs::status::OK;
 }
 
-TEST_CASE("Bm+trees support complex value types") {
+TEST_CASE("Bm+trees support complex value types", "[btree]") {
     while (!free_pages.empty()) free_pages.pop();
 
     mem_abstio io(DISK_SIZE);

@@ -8,8 +8,8 @@ set(SOURCE_FILES
 set(TEST_FILES
     test/catch.cpp
     test/btree.cpp
-    # test/btree-extent-values.cpp
-    # test/btree-remove.cpp
+    test/btree-extent-values.cpp
+    test/btree-remove.cpp
 )
 
 include_directories(include)

@@ -24,13 +24,16 @@
 
 #include <cstdint>
 
+namespace brufs {
+    class brufs;
+}
+
+#include "io.hpp"
 #include "structures.hpp"
 #include "status.hpp"
+#include "btree-decl.hpp"
 
 namespace brufs {
-
-using ssize = long long;
-using offset = long long;
 
 class abstio {
 public:
@@ -89,20 +92,21 @@ class brufs {
 private:
     disk *dsk;
 
+    char *raw_header;
+
     header hdr;
 
-    address *root_ptr_index;
-    rootptr **root_ptrs;
+    bmtree::bmtree<size, extent> fbt;
+    bmtree::bmtree<hash, root> rht;
 
-    address *free_extent_index;
-
-    uint16_t blocks_per_cluster;
-
-    status init_free_list();
-    status open_free_list();
+    extent *get_spare_clusters() { 
+        return reinterpret_cast<extent *>(
+            this->raw_header + this->hdr.header_size - this->hdr.sc_high_mark * sizeof(extent)
+        );
+    }
 
 public:
-    brufs(disk *dsk) : dsk(dsk) {}
+    brufs(disk *dsk) : dsk(dsk), fbt(this, 0), rht(this, 0) {}
 
     disk *get_disk() { return this->dsk; }
 

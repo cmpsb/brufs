@@ -44,3 +44,7 @@ static inline N updiv(N divident, N divisor) {
 //         return (etaoin > shrdlu) ? etaoin : shrdlu;
 //     }
 // }
+
+#include "btree-def-alloc.hpp"
+#include "btree-def-container.hpp"
+#include "btree-def-node.hpp"

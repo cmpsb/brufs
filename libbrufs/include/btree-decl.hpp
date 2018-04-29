@@ -22,9 +22,21 @@
 
 #pragma once
 
-#include "rtstructures.hpp"
+#include <cassert>
+#include <cstring>
+#include <cstdlib>
+#include <new>
 
-namespace brufs { namespace bmtree {
+#include "types.hpp"
+#include "status.hpp"
+#include "structures.hpp"
+
+namespace brufs { 
+
+class brufs;
+
+namespace bmtree {
+
 /**
  * Allocates one or more blocks to store tree data in.
  * 
@@ -39,9 +51,11 @@ using allocator = status (*)(brufs &fs, size length, extent &target);
 /**
  * Allocates blocks using the usual free blocks tree.
  */
-static status ALLOC_NORMAL(brufs &fs, size length, extent &target) {
-    return fs.allocate_blocks(length, target);
-}
+static inline status ALLOC_NORMAL(brufs &, size, extent &);
+
+using deallocator = void (*)(brufs &fs, const extent &ext);
+
+static inline void DEALLOC_NORMAL(brufs &, const extent &);
 
 /**
  * The header of a Bm+tree node.
@@ -74,7 +88,7 @@ struct header {
 static_assert(std::is_standard_layout<header>::value);
 static_assert(sizeof(header) % 8 == 0);
 
-template <typename K, typename V, allocator A>
+template <typename K, typename V>
 class node;
 
 /**
@@ -85,13 +99,13 @@ class node;
  * @tparam A the allocator function to use
  * @tparam C the comparator function to use
  */
-template <typename K, typename V, allocator A = ALLOC_NORMAL>
+template <typename K, typename V>
 class bmtree {
 private:
     /**
      * The filesystem the Bm+tree resides on.
      */
-    brufs &fs;
+    brufs *fs;
 
     /**
      * The size of a node in bytes.
@@ -105,10 +119,17 @@ private:
     unsigned int max_level;
 
     /**
+     * The allocator to use.
+     */
+    allocator alloctr;
+
+    deallocator dealloctr;
+
+    /**
      * The root of the tree.
      */
-    node<K, V, A> root;
-    friend node<K, V, A>;
+    node<K, V> root;
+    friend node<K, V>;
 
     /**
      * @brief [brief description]
@@ -117,6 +138,18 @@ private:
      * @param new_addr [description]
      */
     void update_root(address new_addr);
+
+    /**
+     * Allocates a block for the tree.
+     * 
+     * @param length the length of the block in bytes
+     * @param target where to write the block extent
+     * 
+     * @return a status return code
+     */
+    status alloc(size length, extent &target);
+
+    void free(const extent &ext);
 
 public:
     /**
@@ -127,17 +160,22 @@ public:
      * @param length the size of each node in the tree
      * @param max_level the maximum level of nodes in the tree
      */
-    bmtree(brufs &fs, address addr, size length, unsigned int max_level = 5);
+    bmtree(brufs *fs, address addr, size length, 
+           allocator alloc = ALLOC_NORMAL, deallocator dealloc = DEALLOC_NORMAL,
+           unsigned int max_level = 5);
 
-    bmtree(brufs &fs, size length, unsigned int max_level = 5);
+    bmtree(brufs *fs, size length, 
+           allocator alloc = ALLOC_NORMAL, deallocator dealloc = DEALLOC_NORMAL,
+           unsigned int max_level = 5);
 
-    bmtree(const bmtree<K, V, A> &other);
+    bmtree(const bmtree<K, V> &other);
 
-    bmtree<K, V, A> &operator=(const bmtree<K, V, A> &other);
+    bmtree<K, V> &operator=(const bmtree<K, V> &other);
 
     status init();
 
     status search(const K key, V &value, bool strict = false);
+    int search(const K key, V *value, int max, bool strict = false);
 
     status insert(const K key, const V value);
 
@@ -163,12 +201,12 @@ public:
  * @tparam A the allocator function to use
  * @tparam C the comparator function to use
  */
-template <typename K, typename V, allocator A>
+template <typename K, typename V>
 struct node {
     /**
      * The filesystem this node resides on.
      */
-    brufs &fs;
+    brufs *fs;
 
     /**
      * The address this node starts at.
@@ -183,7 +221,7 @@ struct node {
     /**
      * The containing bmtree keeping track of the root of the tree.
      */
-    bmtree<K, V, A> *container;
+    bmtree<K, V> *container;
 
     /**
      * The memory buffer the actual node data resides in.
@@ -198,7 +236,7 @@ struct node {
     /**
      * The parent of this node.
      */
-    class node<K, V, A> *parent;
+    class node<K, V> *parent;
 
     /**
      * The index of the address in the parent pointing to this node.
@@ -214,8 +252,8 @@ struct node {
      * @param container the managing container representing the entire tree
      * @param parent the parent of this node (if any; NULL if this is the root)
      */
-    node(brufs &fs, address addr, size length, bmtree<K, V, A> *container, 
-         node<K, V, A> *parent = nullptr, unsigned int index_in_parent = UINT_MAX);
+    node(brufs *fs, address addr, size length, bmtree<K, V> *container, 
+         node<K, V> *parent = nullptr, unsigned int index_in_parent = UINT_MAX);
 
     /**
      * Creates a new node not backed by any on-disk structure.
@@ -223,7 +261,7 @@ struct node {
      * @param fs the filesystem the tree belongs to
      * @param container the managing container representing the entire tree
      */
-    node(brufs &fs, bmtree<K, V, A> *container);
+    node(brufs *fs, bmtree<K, V> *container);
 
     /**
      * Copies another node.
@@ -231,14 +269,12 @@ struct node {
      * 
      * @param other the node to copy
      */
-    node(const node<K, V, A> &other);
+    node(const node<K, V> &other);
 
     /**
      * Destructs the node, while retaining the data on-disk.
      */
-    ~node() {
-        free(this->buf);
-    }
+    ~node();
 
     /**
      * Copies another node into this instance.
@@ -246,7 +282,14 @@ struct node {
      * 
      * @param other the node to copy
      */
-    node<K, V, A> &operator=(const node<K, V, A> &other);
+    node<K, V> &operator=(const node<K, V> &other);
+
+    /**
+     * Initializes the node.
+     * 
+     * @return a status code
+     */
+    status init();
 
     /**
      * Returns the maximum possible amount of values (and thus also keys) this node can contain.
@@ -336,6 +379,9 @@ struct node {
      * @return a status code; OK if the key was found, E_NOT_FOUND if it wasn't
      */
     status search(const K &key, V &value, bool strict);
+
+    int search_all(const K &key, V *value, int max, bool strict);
+    int copy_while(const K &key, V *value, unsigned int start, int max, bool strict);
 
     status insert_initial(const K &key, address left, address right);
 

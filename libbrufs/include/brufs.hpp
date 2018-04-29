@@ -22,17 +22,10 @@
 
 #pragma once
 
-#include "structures.hpp"
 #include "rtstructures.hpp"
-#include "status.hpp"
 
 namespace brufs {
 
-status open();
-
 void get_version(version &version);
-
-ssize dread(disk *dsk, void *buf, size count, address offset);
-ssize dwrite(disk *dsk, const void *buf, size count, address offset);
 
 }

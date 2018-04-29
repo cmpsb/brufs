@@ -22,34 +22,13 @@
 
 #pragma once
 
-#include "rtstructures.hpp"
+#include "types.hpp"
 
-namespace brufs { namespace bmtree {
+namespace brufs {
 
-/**
- * Allocates blocks using a separate pool of blocks where the free blocks tree should pull
- * free blocks from, to prevent deadlocks.
- */
-static inline status ALLOC_FBT_BLOCK(brufs &fs, size length, extent &target) {
-    return fs.allocate_tree_blocks(length, target);
+class disk;
+
+ssize dread(disk *dsk, void *buf, size count, address offset);
+ssize dwrite(disk *dsk, const void *buf, size count, address offset);
+
 }
-
-/**
- * Will never allocate a new block, returning E_NO_SPACE instead.
- */
-static inline status ALLOC_NEVER(brufs &fs, size length, extent &target) {
-    (void) fs;
-    (void) length;
-    (void) target;
-    return status::E_NO_SPACE;
-}
-
-static inline status ALLOC_NORMAL(brufs &fs, size length, extent &target) {
-    return fs.allocate_blocks(length, target);
-}
-
-static inline void DEALLOC_NORMAL(brufs &fs, const extent &ext) {
-    fs.free_blocks(ext);
-}
-
-}}

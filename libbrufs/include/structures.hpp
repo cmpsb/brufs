@@ -24,14 +24,9 @@
 #include <type_traits>
 #include <cstdint>
 
+#include "types.hpp"
+
 namespace brufs {
-
-using address = uint64_t;
-using size = uint64_t;
-using hash = uint64_t;
-
-using short_size = uint32_t;
-using short_hash = uint32_t;
 
 static const char * const MAGIC_STRING = "BRUTAFS\nBINARY\n";
 static const size MAGIC_STRING_LENGTH = 16;
@@ -44,6 +39,12 @@ static const size BLOCK_SIZE = 512;
 
 static inline bool is_valid_size(size size) {
     return (size & 511) == 0;
+}
+
+template <typename T>
+static inline bool is_power_of_two(T v) {
+    // https://graphics.stanford.edu/~seander/bithacks.html#DetermineIfPowerOf2
+    return v && !(v & (v - 1));
 }
 
 struct version {
@@ -69,6 +70,53 @@ static_assert(
 );
 static_assert(sizeof(version) == 4, "the version structure must be exactly 4 bytes long");
 
+/**
+ * An extent describing the start of a contiguous bunch of data and how long it is
+ */
+struct extent {
+    /**
+     * A magic address that indicates that the free list ends here.
+     */
+    static const address END;
+
+    /**
+     * The start LBA of the extent
+     */
+    address offset;
+
+    /**
+     * The length of the extent in blocks
+     */
+    size length;
+
+    extent() = default;
+
+    extent(address offset, size length) : offset(offset), length(length) {}
+
+    auto operator==(const extent &other) const {
+        return this->offset == other.offset && this->length == other.length;
+    }
+};
+static_assert(
+    std::is_standard_layout<extent>::value, "the extent structure must be standard-layout"
+);
+
+struct checked_extent {
+    /**
+     * The extent itself.
+     */
+    extent ext;
+
+    /**
+     * The checksum of the data in the extent
+     */
+    hash checksum;
+};
+static_assert(
+    std::is_standard_layout<checked_extent>::value, 
+    "the checked extent structure must be standard-layout"
+);
+
 struct header {
     /**
      * Magic string identifying the partition as Brufs
@@ -91,12 +139,25 @@ struct header {
      */
     uint64_t checksum;
 
-
-    uint32_t num_roots;
-    uint32_t num_root_buckets;
-    uint16_t root_entry_size;
     uint32_t cluster_size;
+    uint8_t cluster_size_exp;
+    uint8_t unused1[3];
     uint64_t num_blocks;
+
+    uint8_t sc_low_mark;
+    uint8_t sc_high_mark;
+    uint8_t sc_count;
+    uint8_t unused2;
+
+    uint16_t fbt_rel_size;
+    uint16_t rht_rel_size;
+
+    uint64_t fbt_address;
+
+    /**
+     * The starting address of the root entry list
+     */
+    uint64_t rht_address;
 
     /**
      * Flags
@@ -104,23 +165,11 @@ struct header {
      * Defaults to 0
      */
     uint64_t flags;
-
-    /**
-     * The starting address of the root entry list
-     */
-    uint64_t root_entries_offset;
 };
 static_assert(std::is_standard_layout<header>::value, "the fs header must be standard-layout");
-static_assert(sizeof(header) <= 4096, "the fs header should fit in 4k");
-
-/**
- * A UUID that identifies a user
- */
-struct uid {
-    uint64_t upper;
-    uint64_t lower;
-};
-static_assert(std::is_standard_layout<uid>::value, "the uid structure must be standard-layout");
+static_assert(
+    sizeof(header) <= (4096 - 16 * sizeof(struct extent)), "the fs header should fit in 4k"
+);
 
 /**
  * A root in the filesystem
@@ -136,9 +185,14 @@ struct root {
     char label[MAX_LABEL_LENGTH];
 
     /**
-     * The principal owner of the root. Private roots allow 
+     * The principal owner of the root.
      */
-    uid owner;
+    __uint128_t owner;
+
+    /**
+     * The index node of the actual directory
+     */
+    __uint128_t root_inode;
 
     /**
      * Flags
@@ -147,10 +201,8 @@ struct root {
      */
     uint64_t flags;
 
-    /**
-     * The index node of the actual directory
-     */
-    uint64_t root_inode;
+    uint64_t int_address;
+    uint64_t ait_address;
 };
 static_assert(std::is_standard_layout<root>::value, "the root structure must be standard-layout");
 static_assert(sizeof(root) <= 512, "a root entry should fit in a block");
@@ -222,53 +274,6 @@ static_assert(
 );
 
 /**
- * An extent describing the start of a contiguous bunch of data and how long it is
- */
-struct extent {
-    /**
-     * A magic address that indicates that the free list ends here.
-     */
-    static const address END;
-
-    /**
-     * The start LBA of the extent
-     */
-    address offset;
-
-    /**
-     * The length of the extent in blocks
-     */
-    size length;
-
-    extent() = default;
-
-    extent(address offset, size length) : offset(offset), length(length) {}
-
-    auto operator==(const extent &other) const {
-        return this->offset == other.offset && this->length == other.length;
-    }
-};
-static_assert(
-    std::is_standard_layout<extent>::value, "the extent structure must be standard-layout"
-);
-
-struct checked_extent {
-    /**
-     * The extent itself.
-     */
-    extent ext;
-
-    /**
-     * The checksum of the data in the extent
-     */
-    hash checksum;
-};
-static_assert(
-    std::is_standard_layout<checked_extent>::value, 
-    "the checked extent structure must be standard-layout"
-);
-
-/**
  * The fields common to all inodes.
  */
 struct inode_header {
@@ -309,7 +314,7 @@ struct inode_header {
     /**
      * Checksum of this inode, with this field 0
      */
-    short_hash checksum;
+    hash checksum;
 };
 static_assert(
     std::is_standard_layout<inode_header>::value, "the inode header must be standard-layout"

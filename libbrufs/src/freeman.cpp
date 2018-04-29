@@ -20,18 +20,62 @@
  * SOFTWARE.
  */
 
+#include <cassert>
+
 #include "internal.hpp"
 
 const brufs::address brufs::extent::END = 0;
 
-brufs::status brufs::brufs::allocate_blocks(UNUSED size length, UNUSED extent &target) {
-    return status::E_NO_SPACE;
-}
+brufs::status brufs::brufs::allocate_blocks(size length, extent &target) {
+    extent result;
+    status status = this->fbt.remove(length, result);
+    if (status < 0) return status;
 
-brufs::status brufs::brufs::allocate_tree_blocks(UNUSED size length, UNUSED extent &target) {
-    return status::E_NO_SPACE;
-}
+    if (result.length > length) {
+        extent residual {result.offset + length, result.length - length};
+        status = this->fbt.insert(result.length, residual);
+        if (status  < 0) return status;
+    }
 
-brufs::status brufs::brufs::free_blocks(UNUSED const extent &extent) {
+    target = {result.offset, length};
+
+    auto list = this->get_spare_clusters();
+    while (this->hdr.sc_count < this->hdr.sc_low_mark) {
+        extent replacement;
+        status = this->fbt.remove(length, replacement);
+        if (status != status::OK) break;
+
+        list[this->hdr.sc_count] = replacement;
+    }
+
     return status::OK;
+}
+
+brufs::status brufs::brufs::allocate_tree_blocks(UNUSED size length, extent &target) {
+    if (this->hdr.sc_count == 0) return status::E_NO_SPACE;
+    --this->hdr.sc_count;
+
+    auto list = this->get_spare_clusters();
+    target = list[this->hdr.sc_count];
+
+    return status::OK;
+}
+
+brufs::status brufs::brufs::free_blocks(const extent &ext) {
+    auto fbt_block_size = this->hdr.fbt_rel_size * BLOCK_SIZE;
+
+    if (this->hdr.sc_count < this->hdr.sc_high_mark && ext.length >= fbt_block_size) {
+        auto list = this->get_spare_clusters();
+
+        list[this->hdr.sc_count] = {ext.offset, fbt_block_size};
+
+        extent residual {ext.offset + fbt_block_size, ext.length - fbt_block_size};
+        if (residual.length > 0) {
+            return this->fbt.insert(residual.length, residual);
+        }
+
+        return status::OK;
+    }
+
+    return this->fbt.insert(ext.length, ext);
 }

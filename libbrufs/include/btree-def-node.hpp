@@ -29,9 +29,9 @@
 
 namespace brufs { namespace bmtree {
 
-template<typename K, typename V, allocator A>
-node<K, V, A>::node(brufs &fs, address addr, size length, bmtree<K, V, A> *container, 
-                    node<K, V, A> *parent, unsigned int index_in_parent) :
+template<typename K, typename V>
+node<K, V>::node(brufs *fs, address addr, size length, bmtree<K, V> *container, 
+                    node<K, V> *parent, unsigned int index_in_parent) :
     fs(fs), addr(addr), length(length), container(container), parent(parent), 
     index_in_parent(index_in_parent)
 {
@@ -39,21 +39,26 @@ node<K, V, A>::node(brufs &fs, address addr, size length, bmtree<K, V, A> *conta
     this->hdr = reinterpret_cast<header *>(this->buf);
 }
 
-template<typename K, typename V, allocator A>
-node<K, V, A>::node(brufs &fs, bmtree<K, V, A> *container) :
+template<typename K, typename V>
+node<K, V>::node(brufs *fs, bmtree<K, V> *container) :
     fs(fs), addr(0), length(0), container(container), parent(nullptr), index_in_parent(UINT_MAX)
 {
     this->buf = NULL;
     this->hdr = NULL;
 }
 
-template<typename K, typename V, allocator A>
-node<K, V, A>::node(const node<K, V, A> &other) :
+template<typename K, typename V>
+node<K, V>::node(const node<K, V> &other) :
     node(other.fs, other.addr, other.length, other.container, other.parent)
 {}
 
-template<typename K, typename V, allocator A>
-node<K, V, A> &node<K, V, A>::operator=(const node<K, V, A> &other) {
+template <typename K, typename V>
+node<K, V>::~node() {
+    free(this->buf);
+}
+
+template<typename K, typename V>
+node<K, V> &node<K, V>::operator=(const node<K, V> &other) {
     if (this->length != other.length) {
         this->~node();
         this->buf = static_cast<char *>(malloc(other.length));
@@ -69,40 +74,48 @@ node<K, V, A> &node<K, V, A>::operator=(const node<K, V, A> &other) {
     return *this;
 }
 
-template<typename K, typename V, allocator A>
+template <typename K, typename V>
+status node<K, V>::init() {
+    memset(this->buf, 0, this->length);
+    new (this->hdr) header;
+
+    return this->store();
+}
+
+template<typename K, typename V>
 template<typename R>
-auto node<K, V, A>::get_cap() {
+auto node<K, V>::get_cap() {
     return (this->length - sizeof(header) - sizeof(address)) / (sizeof(K) + sizeof(R));
     // return 4u;
 }
 
-template<typename K, typename V, allocator A>
+template<typename K, typename V>
 template<typename R>
-R *node<K, V, A>::get_values() {
+R *node<K, V>::get_values() {
     return reinterpret_cast<R *>(this->buf + this->hdr->size + this->get_cap<R>() * sizeof(K));
 }
 
-template<typename K, typename V, allocator A>
-K *node<K, V, A>::get_keys() {
+template<typename K, typename V>
+K *node<K, V>::get_keys() {
     return reinterpret_cast<K *>(this->buf + this->hdr->size);
 }
 
-template<typename K, typename V, allocator A>
-address *node<K, V, A>::get_link() {
+template<typename K, typename V>
+address *node<K, V>::get_link() {
     return reinterpret_cast<address *>(this->buf + this->length - sizeof(address));
 }
 
-template <typename K, typename V, allocator A>
-address &node<K, V, A>::prev() {
+template <typename K, typename V>
+address &node<K, V>::prev() {
     return *this->get_link();
 }
 
-template<typename K, typename V, allocator A>
-status node<K, V, A>::load() {
+template<typename K, typename V>
+status node<K, V>::load() {
     assert(this->buf);
 
 
-    ssize status = dread(this->fs.get_disk(), this->buf, this->length, this->addr);
+    ssize status = dread(this->fs->get_disk(), this->buf, this->length, this->addr);
     if (status < 0) return static_cast<::brufs::status>(status);
 
     if (memcmp(this->hdr->magic, "B+", 2) != 0) return status::E_BAD_MAGIC;
@@ -111,33 +124,31 @@ status node<K, V, A>::load() {
     return status::OK;
 }
 
-template<typename K, typename V, allocator A>
-status node<K, V, A>::store() {
+template<typename K, typename V>
+status node<K, V>::store() {
 
-    ssize status = dwrite(this->fs.get_disk(), this->buf, this->length, this->addr);
+    ssize status = dwrite(this->fs->get_disk(), this->buf, this->length, this->addr);
     if (status < 0) return static_cast<::brufs::status>(status);
 
     return status::OK;
 }
 
-template<typename K, typename V, allocator A>
-status node<K, V, A>::locate(const K &key, unsigned int &result) {
+template<typename K, typename V>
+status node<K, V>::locate(const K &key, unsigned int &result) {
     assert(this->hdr->num_values > 0);
 
     auto keys = this->get_keys();
 
     unsigned int i = 0;
     for (; i < (this->hdr->num_values - 1) && key > keys[i]; ++i);
-        
-    // if (i >= (this->hdr->num_values - 1) && key > keys[i]) ++i;
 
     result = i;
 
     return status::OK;
 }
 
-template<typename K, typename V, allocator A>
-status node<K, V, A>::locate_in_leaf(const K &key, unsigned int &result) {
+template<typename K, typename V>
+status node<K, V>::locate_in_leaf(const K &key, unsigned int &result) {
     assert(this->hdr->level == 0);
     assert(this->hdr->num_values > 0);
 
@@ -145,6 +156,7 @@ status node<K, V, A>::locate_in_leaf(const K &key, unsigned int &result) {
 
     unsigned int i = 0;
     for (; i < this->hdr->num_values && key > keys[i]; ++i);
+    while (key == keys[i + 1] && i < this->hdr->num_values - 1) ++i;
 
     result = i;
     if (i >= this->hdr->num_values) return status::E_NOT_FOUND;
@@ -152,8 +164,8 @@ status node<K, V, A>::locate_in_leaf(const K &key, unsigned int &result) {
     return status::OK;
 }
 
-template<typename K, typename V, allocator A>
-status node<K, V, A>::locate_in_leaf_strict(const K &key, unsigned int &result) {
+template<typename K, typename V>
+status node<K, V>::locate_in_leaf_strict(const K &key, unsigned int &result) {
     assert(this->hdr->level == 0);
     assert(this->hdr->num_values > 0);
 
@@ -168,8 +180,19 @@ status node<K, V, A>::locate_in_leaf_strict(const K &key, unsigned int &result) 
     return status::OK;
 }
 
-template<typename K, typename V, allocator A>
-status node<K, V, A>::search(const K &key, V &value, bool strict) {
+template <typename K, typename V>
+status node<K, V>::search(const K &key, V &value, bool strict) {
+    int status = this->search_all(key, &value, 1, strict);
+    if (status < 0) return static_cast<::brufs::status>(status);
+    if (status == 0) return status::E_NOT_FOUND;
+    return ::brufs::status::OK;
+}
+
+template<typename K, typename V>
+int node<K, V>::search_all(const K &key, V *value, int max, bool strict) {
+    assert(max >= 0);
+    if (max == 0) return 0;
+
     if (this->hdr->num_values == 0) return status::E_NOT_FOUND;
     if (this->hdr->num_values == 1) {
         assert(this->hdr->level == 0);
@@ -178,9 +201,9 @@ status node<K, V, A>::search(const K &key, V &value, bool strict) {
         if (strict && key != keys[0]) return status::E_NOT_FOUND;
 
         auto values = this->get_values<V>();
-        value = values[0];
+        *value = values[0];
 
-        return status::OK;
+        return 1;
     }
 
     if (this->hdr->level > 0) {
@@ -190,29 +213,64 @@ status node<K, V, A>::search(const K &key, V &value, bool strict) {
         unsigned int idx;
         this->locate(key, idx);
 
-        node<K, V, A> subtree(
+        node<K, V> subtree(
             this->fs, values[idx], this->length, this->container, this, idx
         );
 
         status status = subtree.load();
         if (status < 0) return status;
 
-        return subtree.search(key, value, strict);
+        return subtree.search_all(key, value, max, strict);
     }
 
     unsigned int idx;
-    status stt = strict ? this->locate_in_leaf_strict(key, idx) : this->locate_in_leaf(key, idx);
+    status stt = this->locate_in_leaf(key, idx);
     if (stt < 0) return stt;
 
-    // This is a leaf, look up the value
-    auto values = this->get_values<V>();
-
-    value = values[idx];
-    return status::OK;
+    return this->copy_while(key, value, idx, max, strict);
 }
 
-template<typename K, typename V, allocator A>
-status node<K, V, A>::insert_initial(const K &key, address left, address right) {
+template <typename K, typename V>
+int node<K, V>::copy_while(const K &key, V *value, unsigned int start, int max, bool strict) {
+    assert(max >= 0);
+    if (max == 0) return 0;
+
+    auto keys = this->get_keys();
+    auto values = this->get_values<V>();
+    // printf("%d == %d\n", keys[start],  key);
+
+    size i = start;
+    int k = 0;
+    while (!strict || keys[i] == key) {
+        value[k] = values[i];
+        ++k;
+
+        if (k >= max) return k;
+        if (i == 0) break;
+
+        --i;
+        // printf("%d == %d\n", keys[i], key);
+        // printf("%d == %d\n", keys[i + 2], key);
+    }
+
+    assert(k < max);
+
+    if (this->prev() == 0) return k;
+
+    node<K, V> pred(
+        this->fs, this->prev(), this->length, this->container, this, this->index_in_parent - 1
+    );
+    status status = pred.load();
+    if (status < 0) return status;
+
+    int stt = pred.copy_while(key, value + k, pred.hdr->num_values - 1, max - k, strict);
+    if (stt < 0) return stt;
+
+    return stt + k;
+}
+
+template<typename K, typename V>
+status node<K, V>::insert_initial(const K &key, address left, address right) {
     this->hdr->num_values = 2;
 
     auto keys = this->get_keys();
@@ -225,9 +283,9 @@ status node<K, V, A>::insert_initial(const K &key, address left, address right) 
     return this->store();
 }
 
-template <typename K, typename V, allocator A>
+template <typename K, typename V>
 template <typename R>
-status node<K, V, A>::split(const K &key, const R &value) {
+status node<K, V>::split(const K &key, const R &value) {
     status status;
 
     auto keys = this->get_keys();
@@ -239,10 +297,10 @@ status node<K, V, A>::split(const K &key, const R &value) {
     this->hdr->num_values = num_right;
 
     extent sibling_extent;
-    status = A(this->fs, this->length, sibling_extent);
+    status = this->container->alloc(this->length, sibling_extent);
     if (status < 0) return status;
 
-    node<K, V, A> sibling(
+    node<K, V> sibling(
         this->fs, sibling_extent.offset, this->length, this->container, this
     );
     memset(sibling.buf, 0, this->length);
@@ -259,7 +317,7 @@ status node<K, V, A>::split(const K &key, const R &value) {
 
     status = sibling.store();
     if (status < 0) {
-        this->fs.free_blocks(sibling_extent);
+        this->container->free(sibling_extent);
         return status;
     }
 
@@ -268,7 +326,7 @@ status node<K, V, A>::split(const K &key, const R &value) {
 
     status = this->store();
     if (status < 0) {
-        this->fs.free_blocks(sibling_extent);
+        this->container->free(sibling_extent);
         return status;
     }
 
@@ -277,7 +335,7 @@ status node<K, V, A>::split(const K &key, const R &value) {
             sibling_keys[num_left - 1], sibling_extent.offset
         );
         if (status < 0) {
-            this->fs.free_blocks(sibling_extent);
+            this->container->free(sibling_extent);
             return status;
         }
 
@@ -288,14 +346,14 @@ status node<K, V, A>::split(const K &key, const R &value) {
         return this->insert_direct(key, value);
     } else {
         extent parent_extent;
-        status = A(this->fs, this->length, parent_extent);
+        status = this->container->alloc(this->length, parent_extent);
         if (status < 0) {
-            this->fs.free_blocks(sibling_extent);
+            this->container->free(sibling_extent);
             return status;
         }
 
         // Create a new parent
-        node<K, V, A> pstor(
+        node<K, V> pstor(
             this->fs, parent_extent.offset, this->length, this->container
         );
         this->parent = &pstor;
@@ -321,9 +379,9 @@ status node<K, V, A>::split(const K &key, const R &value) {
     }
 }
 
-template<typename K, typename V, allocator A>
+template<typename K, typename V>
 template <typename R>
-status node<K, V, A>::insert_direct(const K &key, const R &value) {
+status node<K, V>::insert_direct(const K &key, const R &value) {
     auto key_cap = this->get_cap<R>();
 
     if (this->hdr->num_values >= key_cap) return this->split<R>(key, value);
@@ -346,8 +404,8 @@ status node<K, V, A>::insert_direct(const K &key, const R &value) {
     return this->store();
 }
 
-template<typename K, typename V, allocator A>
-status node<K, V, A>::insert(const K &key, const V &value) {
+template<typename K, typename V>
+status node<K, V>::insert(const K &key, const V &value) {
     if (this->hdr->num_values == 0) {
         assert(this->hdr->level == 0);
 
@@ -368,7 +426,7 @@ status node<K, V, A>::insert(const K &key, const V &value) {
 
         auto values = this->get_values<address>();
 
-        node<K, V, A> subtree(fs, values[idx], this->length, this->container, this, idx);
+        node<K, V> subtree(fs, values[idx], this->length, this->container, this, idx);
 
         status status = subtree.load();
         if (status < 0) return status;
@@ -379,9 +437,9 @@ status node<K, V, A>::insert(const K &key, const V &value) {
     return this->insert_direct<V>(key, value);
 }
 
-template <typename K, typename V, allocator A>
+template <typename K, typename V>
 template <typename R>
-status node<K, V, A>::adopt(node<K, V, A> *adoptee) {
+status node<K, V>::adopt(node<K, V> *adoptee) {
     status status;
 
     auto value_cap = this->get_cap<R>();
@@ -411,14 +469,14 @@ status node<K, V, A>::adopt(node<K, V, A> *adoptee) {
     status = this->parent->remove_direct<address>(adoptee->index_in_parent);
     if (status < 0) return status;
 
-    this->fs.free_blocks(extent { adoptee->addr, adoptee->length });
+    this->container->free({adoptee->addr, adoptee->length});
 
     return status::OK;
 }
 
-template <typename K, typename V, allocator A>
+template <typename K, typename V>
 template <typename R>
-status node<K, V, A>::abduct_highest(node<K, V, A> &node) {
+status node<K, V>::abduct_highest(node<K, V> &node) {
     assert(node.index_in_parent < this->index_in_parent);
 
     --node.hdr->num_values;
@@ -449,9 +507,9 @@ status node<K, V, A>::abduct_highest(node<K, V, A> &node) {
     return this->parent->store();
 }
 
-template <typename K, typename V, allocator A>
+template <typename K, typename V>
 template <typename R>
-status node<K, V, A>::abduct_lowest(node<K, V, A> &node) {
+status node<K, V>::abduct_lowest(node<K, V> &node) {
     assert(node.index_in_parent > this->index_in_parent);
 
     --node.hdr->num_values;
@@ -480,9 +538,9 @@ status node<K, V, A>::abduct_lowest(node<K, V, A> &node) {
     return this->parent->store();
 }
 
-template <typename K, typename V, allocator A>
+template <typename K, typename V>
 template <typename R>
-status node<K, V, A>::remove_direct(unsigned int idx) {
+status node<K, V>::remove_direct(unsigned int idx) {
     assert(this->hdr->num_values > 0);
     assert(idx < this->hdr->num_values);
 
@@ -492,16 +550,18 @@ status node<K, V, A>::remove_direct(unsigned int idx) {
     assert(this->parent == nullptr || this->index_in_parent < UINT_MAX);
 
     auto keys = this->get_keys();
-    auto values = this->get_values<R>();
 
     if (this->hdr->level > 0 && this->parent == nullptr && this->hdr->num_values == 2) {
 
-        this->fs.free_blocks({ this->addr, this->length });
+        this->container->free({this->addr, this->length});
 
+        auto values = this->get_values<address>();
         this->container->update_root(values[1 - idx]);
 
         return status::OK;
     }
+
+    auto values = this->get_values<R>();
 
     --this->hdr->num_values;
     memmove(keys + idx, keys + idx + 1, (this->hdr->num_values - idx) * sizeof(K));
@@ -516,7 +576,7 @@ status node<K, V, A>::remove_direct(unsigned int idx) {
 
     // Otherwise check if we can fondle the neighbors
     if (this->index_in_parent > 0) {
-        node<K, V, A> left_sibling(
+        node<K, V> left_sibling(
             this->fs, this->parent->get_values<address>()[this->index_in_parent - 1],
             this->length, this->container, this->parent, this->index_in_parent - 1
         );
@@ -535,7 +595,7 @@ status node<K, V, A>::remove_direct(unsigned int idx) {
     }
 
     if (this->index_in_parent < this->parent->hdr->num_values - 1) {
-        node<K, V, A> right_sibling(
+        node<K, V> right_sibling(
             this->fs, this->parent->get_values<address>()[this->index_in_parent + 1],
             this->length, this->container, this->parent, this->index_in_parent + 1
         );
@@ -557,8 +617,8 @@ status node<K, V, A>::remove_direct(unsigned int idx) {
     return status::E_INTERNAL;
 }
 
-template<typename K, typename V, allocator A>
-status node<K, V, A>::remove(const K &key, V &value, bool strict) {
+template<typename K, typename V>
+status node<K, V>::remove(const K &key, V &value, bool strict) {
     if (this->hdr->num_values == 0) return status::E_NOT_FOUND;
     if (this->hdr->num_values == 1) {
         assert(this->hdr->level == 0);
@@ -581,7 +641,7 @@ status node<K, V, A>::remove(const K &key, V &value, bool strict) {
         unsigned int idx;
         this->locate(key, idx);
 
-        node<K, V, A> subtree(
+        node<K, V> subtree(
             this->fs, values[idx], this->length, this->container, this, idx
         );
 
@@ -604,8 +664,8 @@ status node<K, V, A>::remove(const K &key, V &value, bool strict) {
     return this->remove_direct<V>(idx);
 }
 
-template<typename K, typename V, allocator A>
-status node<K, V, A>::get_last_leaf(address &target) {
+template<typename K, typename V>
+status node<K, V>::get_last_leaf(address &target) {
     status status = this->load();
     if (status < 0) return status;
 
@@ -625,12 +685,12 @@ status node<K, V, A>::get_last_leaf(address &target) {
         return status::OK;
     }
 
-    node<K, V, A> subtree(this->fs, addr, this->length, this->container, this, idx);
+    node<K, V> subtree(this->fs, addr, this->length, this->container, this, idx);
     return subtree.get_last_leaf(target);
 }
 
-template<typename K, typename V, allocator A>
-int node<K, V, A>::pretty_print(char *buf, size len, bool reload) {
+template<typename K, typename V>
+int node<K, V>::pretty_print(char *buf, size len, bool reload) {
     if (reload) {
         this->load();
     }
@@ -661,7 +721,7 @@ int node<K, V, A>::pretty_print(char *buf, size len, bool reload) {
         total += snprintf(buf + total, len - total, "%lX --> %lX : > \"> %ld\"\n", this->addr, values[this->hdr->num_values - 1], keys[this->hdr->num_values - 2]);
 
         for (unsigned int i = 0; i < this->hdr->num_values; ++i) {
-            node child(this->fs, values[i], this->length, this->container, this, i);
+            node<K, V> child(this->fs, values[i], this->length, this->container, this, i);
             total += child.pretty_print(buf + total, len - total);
         }
     }

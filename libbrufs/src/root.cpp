@@ -22,9 +22,6 @@
 
 #include "xxhash/xxhash.h"
 
-static const brufs::address brufs::rootptr::END = 0;
-static const brufs::address brufs::rootptr::DELETED = 1;
-
 // brufs::status brufs::find_root(brufs::brufs &fs, const char *name, brufs::root &target) {
 //     assert(name);
 //     assert(fs.root_ptr_index);

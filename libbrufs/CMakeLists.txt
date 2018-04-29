@@ -9,6 +9,7 @@ set(TEST_FILES
     test/catch.cpp
     test/btree.cpp
     test/btree-extent-values.cpp
+    test/btree-range.cpp
     test/btree-remove.cpp
 )
 

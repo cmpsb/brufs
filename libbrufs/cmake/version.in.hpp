@@ -22,13 +22,6 @@
 
 #pragma once
 
-#include "rtstructures.hpp"
-#include "btree-def-alloc.hpp"
-#include "btree-def-node.hpp"
-#include "btree-def-container.hpp"
-
-namespace brufs {
-
-void get_version(version &version);
-
-}
+#define BRUFS_VERSION_MAJOR ${BRUFS_VERSION_MAJOR}
+#define BRUFS_VERSION_MINOR ${BRUFS_VERSION_MINOR}
+#define BRUFS_VERSION_PATCH ${BRUFS_VERSION_PATCH}

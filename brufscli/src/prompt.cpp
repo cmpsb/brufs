@@ -20,15 +20,50 @@
  * SOFTWARE.
  */
 
-#pragma once
+#include <cstdio>
+#include <cstdint>
+#include <string>
 
-#include "rtstructures.hpp"
-#include "btree-def-alloc.hpp"
-#include "btree-def-node.hpp"
-#include "btree-def-container.hpp"
+template <typename N>
+N prompt_number(const std::string &qry, const std::string &def, const char *format) {
+    for (;;) {
+        fprintf(stderr, "%s? ", qry.c_str());
 
-namespace brufs {
+        if (def.size() > 0) {
+            fprintf(stderr, "[%s] ", def.c_str());
+        }
 
-void get_version(version &version);
+        fprintf(stderr, "> ");
 
+        N value;
+        int num_read = scanf(format, &value);
+        if (num_read == 0) continue;
+        if (num_read == EOF) {
+            if (def.size() == 0) continue;
+            sscanf(def.c_str(), format, &value);
+        }
+
+        return value;
+    }
+}
+
+std::string prompt_string(const std::string &qry, const std::string &def, size_t max_len) {
+    for (;;) {
+        fprintf(stderr, "%s? ", qry.c_str());
+
+        if (def.size() > 0) {
+            fprintf(stderr, "[%s] ", def.c_str());
+        }
+
+        fprintf(stderr, "> ");
+
+        auto buf = new char[max_len + 2];
+        auto res = fgets(buf, max_len + 2, stdin);
+        if (res == nullptr) continue;
+
+        auto ret = std::string(buf);
+        ret.pop_back();
+
+        return ret;
+    }
 }

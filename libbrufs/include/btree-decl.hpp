@@ -57,6 +57,9 @@ using deallocator = void (*)(brufs &fs, const extent &ext);
 
 static inline void DEALLOC_NORMAL(brufs &, const extent &);
 
+template <typename V, typename P>
+using entry_consumer = status (*)(V &item, P &pl);
+
 /**
  * The header of a Bm+tree node.
  */
@@ -132,14 +135,6 @@ private:
     friend node<K, V>;
 
     /**
-     * @brief [brief description]
-     * @details [long description]
-     * 
-     * @param new_addr [description]
-     */
-    void update_root(address new_addr);
-
-    /**
      * Allocates a block for the tree.
      * 
      * @param length the length of the block in bytes
@@ -172,7 +167,7 @@ public:
 
     bmtree<K, V> &operator=(const bmtree<K, V> &other);
 
-    status init();
+    status init(size new_length = 0);
 
     status search(const K key, V &value, bool strict = false);
     int search(const K key, V *value, int max, bool strict = false);
@@ -183,7 +178,18 @@ public:
 
     status count_values(size &count);
 
+    template <typename P>
+    status walk(entry_consumer<V, P> consumer, P &pl);
+
     int pretty_print_root(char *buf, size len);
+
+    /**
+     * @brief [brief description]
+     * @details [long description]
+     * 
+     * @param new_addr [description]
+     */
+    void update_root(address new_addr, size length = 0);
 
     virtual void on_root_change(address new_root) {
         (void) new_root;

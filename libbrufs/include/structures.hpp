@@ -22,7 +22,9 @@
 #pragma once
 
 #include <type_traits>
+#include <cstdlib>
 #include <cstdint>
+#include <cstring>
 
 #include "types.hpp"
 
@@ -51,6 +53,8 @@ struct version {
     uint8_t major;
     uint8_t minor;
     uint16_t patch;
+
+    static version get();
 
     int compare(const version &other) const;
 
@@ -149,9 +153,6 @@ struct header {
     uint8_t sc_count;
     uint8_t unused2;
 
-    uint16_t fbt_rel_size;
-    uint16_t rht_rel_size;
-
     uint64_t fbt_address;
 
     /**
@@ -165,6 +166,8 @@ struct header {
      * Defaults to 0
      */
     uint64_t flags;
+
+    int validate(void *disk) const;
 };
 static_assert(std::is_standard_layout<header>::value, "the fs header must be standard-layout");
 static_assert(
@@ -176,7 +179,7 @@ static_assert(
  * 
  * The filesystem may have multiple roots, each with their own principal owner.
  */
-struct root {
+struct root_header {
     /**
      * The name of the folder
      * 
@@ -190,11 +193,6 @@ struct root {
     __uint128_t owner;
 
     /**
-     * The index node of the actual directory
-     */
-    __uint128_t root_inode;
-
-    /**
      * Flags
      * 
      * Defaults to 0
@@ -204,8 +202,9 @@ struct root {
     uint64_t int_address;
     uint64_t ait_address;
 };
-static_assert(std::is_standard_layout<root>::value, "the root structure must be standard-layout");
-static_assert(sizeof(root) <= 512, "a root entry should fit in a block");
+static_assert(std::is_standard_layout<root_header>::value, "the root structure must be standard-layout");
+static_assert(sizeof(root_header) <= 512, "a root entry should fit in a block");
+static_assert(sizeof(root_header) % 16 == 0, "a root entry should be 16-byte aligned");
 
 /**
  * An entry in the big root pointer hash table.

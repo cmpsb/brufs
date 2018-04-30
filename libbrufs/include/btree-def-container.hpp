@@ -30,7 +30,8 @@
 namespace brufs { namespace bmtree {
 
 template <typename K, typename V>
-void bmtree<K, V>::update_root(address new_addr) {
+void bmtree<K, V>::update_root(address new_addr, size length) {
+    if (length != 0) this->length = length;
     this->root = node<K, V>(this->fs, new_addr, this->length, this);
     this->on_root_change(new_addr);
 }
@@ -83,7 +84,11 @@ bmtree<K, V> &bmtree<K, V>::operator=(const bmtree<K, V> &other) {
 }
 
 template <typename K, typename V>
-status bmtree<K, V>::init() {
+status bmtree<K, V>::init(size length) {
+    if (length != 0) {
+        this->length = length;
+    }
+
     status status;
     extent root_extent;
     status = this->alloc(this->length, root_extent);
@@ -151,6 +156,38 @@ status bmtree<K, V>::count_values(size &count) {
         if (status < 0) return status;
 
         count += leaf.hdr->num_values;
+
+        leaf_addr = leaf.prev();
+    }
+
+    return status::OK;
+}
+
+template <typename K, typename V>
+template <typename P>
+status bmtree<K, V>::walk(entry_consumer<V, P> consumer, P &payload) {
+    status stt = this->root.load();
+    if (stt < status::OK) return stt;
+
+    address leaf_addr;
+    stt = this->root.get_last_leaf(leaf_addr);
+    if (stt < status::OK) return stt;
+
+    while (leaf_addr != 0) {
+        node<K, V> leaf(this->fs, leaf_addr, this->length, this);
+        stt = leaf.load();
+        if (stt < status::OK) return stt;
+
+        auto values = leaf.template get_values<V>();
+
+        for (ssize i = static_cast<size>(leaf.hdr->num_values) - 1; i >= 0; --i) {
+            do {
+                stt = consumer(values[i], payload);
+            } while (stt == status::RETRY);
+
+            if (stt == status::STOP) return status::OK;
+            if (stt < status::OK) return stt;
+        }
 
         leaf_addr = leaf.prev();
     }

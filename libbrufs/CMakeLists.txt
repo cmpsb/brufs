@@ -1,8 +1,11 @@
 set(SOURCE_FILES
-    src/iohelp.cpp
-    src/freeman.cpp
+    src/brufs.cpp
     src/dust.cpp
+    src/header.cpp
+    src/iohelp.cpp
     src/status.cpp
+    src/version.cpp
+    src/xxhash/xxhash.c
 )
 
 set(TEST_FILES
@@ -13,7 +16,9 @@ set(TEST_FILES
     test/btree-remove.cpp
 )
 
-include_directories(include)
+configure_file(cmake/version.in.hpp version.hpp)
+
+include_directories(include ${CMAKE_CURRENT_BINARY_DIR})
 
 add_library(brufs ${SOURCE_FILES})
 set_target_properties(brufs PROPERTIES PUBLIC_HEADER 

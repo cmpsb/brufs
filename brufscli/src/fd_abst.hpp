@@ -20,15 +20,17 @@
  * SOFTWARE.
  */
 
-#pragma once
+#include "brufs.hpp"
 
-#include "rtstructures.hpp"
-#include "btree-def-alloc.hpp"
-#include "btree-def-node.hpp"
-#include "btree-def-container.hpp"
+class fd_abst : public brufs::abstio {
+    int file;
 
-namespace brufs {
+public:
+    fd_abst(int file);
+    ~fd_abst() override {}
 
-void get_version(version &version);
-
-}
+    brufs::ssize read(void *buf, brufs::size count, brufs::address offset) const override;
+    brufs::ssize write(const void *buf, brufs::size count, brufs::address offset) override;
+    const char *strstatus(brufs::ssize eno) const override;
+    brufs::size get_size() const override;
+};

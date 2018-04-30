@@ -88,34 +88,63 @@ struct disk {
     disk(abstio *io) : io(io) {}
 };
 
+template <typename K, typename V>
+class updatable_bmtree : public bmtree::bmtree<K, V> {
+private:
+    address *target;
+public:
+    updatable_bmtree(brufs *fs, address *target, bmtree::allocator alloc = bmtree::ALLOC_NORMAL) : 
+        bmtree::bmtree<K, V>(fs, 0, alloc), target(target)
+    {}
+
+    void set_target(address *target) {
+        this->target = target;
+    }
+
+    void on_root_change(address new_addr) override {
+        *target = new_addr;
+    }
+};
+
 class brufs {
 private:
     disk *dsk;
 
-    char *raw_header;
+    union {
+        char *raw_header;
+        header *hdr;
+    };
 
-    header hdr;
+    updatable_bmtree<size, extent> fbt;
+    updatable_bmtree<hash, root_header> rht;
 
-    bmtree::bmtree<size, extent> fbt;
-    bmtree::bmtree<hash, root> rht;
+    status stt = status::OK;
 
     extent *get_spare_clusters() { 
-        return reinterpret_cast<extent *>(
-            this->raw_header + this->hdr.header_size - this->hdr.sc_high_mark * sizeof(extent)
-        );
+        return reinterpret_cast<extent *>(this->raw_header + this->hdr->header_size);
     }
 
+    status store_header();
+
 public:
-    brufs(disk *dsk) : dsk(dsk), fbt(this, 0), rht(this, 0) {}
+    brufs(disk *dsk);
+
+    status get_status() const { return this->stt; }
 
     disk *get_disk() { return this->dsk; }
 
-    status init();
+    status init(header &protoheader);
 
     status allocate_blocks(size length, extent &target);
     status free_blocks(const extent &extent);
 
     status allocate_tree_blocks(size length, extent &target);
+
+    ssize count_roots();
+    int collect_roots(root_header *collection, size count);
+
+    status find_root(const char *name, root_header &target);
+    status add_root(root_header &target);
 };
 
 }

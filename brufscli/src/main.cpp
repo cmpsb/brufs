@@ -20,15 +20,47 @@
  * SOFTWARE.
  */
 
-#pragma once
+#include <cstdio>
+#include <string>
 
-#include "rtstructures.hpp"
-#include "btree-def-alloc.hpp"
-#include "btree-def-node.hpp"
-#include "btree-def-container.hpp"
+int init(int, char **);
+int check(int, char **);
+int help(int, char **);
+int add_root(int, char **);
 
-namespace brufs {
+static void print_usage(const char *pname) {
+    fprintf(stderr, 
+        "USAGE: %s ACTION ARGUMENTS...\n"
+        "Actions:\n"
+        "init . . . : format a disk\n"
+        "check  . . : print diagnostic information\n"
+        "help . . . : display help for an action\n",
+        pname
+    );
+}
 
-void get_version(version &version);
+int main(int argc, char **argv) {
+    if (argc == 1) {
+        fprintf(stderr, "Insufficient number of arguments\n");
+        print_usage(argv[0]);
 
+        return 1;
+    }
+
+    std::string action = argv[1];
+
+    if (action == "init") {
+        return init(argc - 1, argv + 1);
+    } else if (action == "check") {
+        return check(argc - 1, argv + 1);
+    } else if (action == "add-root") {
+        return add_root(argc - 1, argv + 1);
+    // } else if (action == "help") {
+    //     return help(argc - 1, argv + 1);
+    }
+
+    fprintf(stderr, "Unknown action %s\n", argv[1]);
+    print_usage(argv[0]);
+
+    return 1;
 }

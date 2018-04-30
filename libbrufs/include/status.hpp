@@ -58,9 +58,14 @@ enum status {
     E_FS_FROM_FUTURE,
 
     /**
-     * The filesystem header is too big (> 4096 bytes)
+     * The filesystem header is too big (> 4096 bytes, minus the free block cache)
      */
     E_HEADER_TOO_BIG,
+
+    /**
+     * The filesystem header is too small for all values.
+     */
+    E_HEADER_TOO_SMALL,
 
     /**
      * THe checksum of one or more blocks does not match the expected value.
@@ -104,6 +109,17 @@ enum status {
     E_MISALIGNED,
 
     /**
+     * Core datastructures are missing.
+     */
+    E_NO_FBT,
+    E_NO_RHT,
+
+    /**
+     * The resource already exists.
+     */
+    E_EXISTS,
+
+    /**
      * Not a real error, but rather the lowest possible I/O abstraction status code
      */
     E_ABSTIO_BASE = INT_MIN >> 1,
@@ -117,7 +133,12 @@ enum status {
      * An exceptional situation happened, but the user should keep retrying until the operation
      * succeeds.
      */
-    RETRY
+    RETRY,
+
+    /**
+     * A request to stop calling that function.
+     */
+    STOP
 };
 
 const char *strerror(status eno);

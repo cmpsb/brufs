@@ -26,7 +26,7 @@
 #include "internal.hpp"
 #include "version.hpp"
 
-int brufs::version::compare(const brufs::version &other) {
+int brufs::version::compare(const version &other) const {
     if (this->major == 0 && other.minor == 0 && other.major == 0 && other.minor == 0) {
         return (this->patch == other.patch) ? 0 : -1000;
     }
@@ -43,7 +43,7 @@ int brufs::version::compare(const brufs::version &other) {
     return 0;
 }
 
-int brufs::version::to_string(char *buf, size_t len) {
+int brufs::version::to_string(char *buf, size_t len) const {
     return snprintf(buf, len, "%hhu.%hhu.%hu", this->major, this->minor, this->patch);
 }
 
@@ -52,10 +52,10 @@ int brufs::version::to_string(char *buf, size_t len) {
  * 
  * @param version the version struct to fill
  */
-void brufs_get_version(brufs_version_t *version) {
-    assert(version);
-
-    version->major = BRUFS_VERSION_MAJOR;
-    version->minor = BRUFS_VERSION_MINOR;
-    version->patch = BRUFS_VERSION_PATCH;
+brufs::version brufs::version::get() {
+    return {
+        BRUFS_VERSION_MAJOR,
+        BRUFS_VERSION_MINOR,
+        BRUFS_VERSION_PATCH
+    };
 }

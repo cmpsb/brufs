@@ -20,15 +20,45 @@
  * SOFTWARE.
  */
 
-#pragma once
+#include <cstdio>
+#include <cstring>
+#include <cerrno>
 
-#include "rtstructures.hpp"
-#include "btree-def-alloc.hpp"
-#include "btree-def-node.hpp"
-#include "btree-def-container.hpp"
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <unistd.h>
 
-namespace brufs {
+#include "brufs.hpp"
 
-void get_version(version &version);
+#include "fd_abst.hpp"
 
+int init(int argc, char **argv) {
+    if (argc < 2) {
+        fprintf(stderr, "Specify a file.\n");
+        return 2;
+    }
+
+    int iofd = open(argv[1], O_RDWR);
+    if (iofd == -1) {
+        fprintf(stderr, "Unable to open %s: %s", argv[1], strerror(errno));
+        return 1;
+    }
+
+    fd_abst io(iofd);
+    brufs::disk disk(&io);
+    brufs::brufs fs(&disk);
+
+    brufs::header proto;
+    proto.cluster_size_exp = 14;
+    proto.sc_low_mark = 6;
+    proto.sc_high_mark = 12;
+
+    brufs::status status = fs.init(proto);
+
+    fprintf(stderr, "%s\n", brufs::strerror(status));
+
+    close(iofd);
+
+    return status != brufs::status::OK;
 }

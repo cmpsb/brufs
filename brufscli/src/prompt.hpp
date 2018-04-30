@@ -20,18 +20,11 @@
  * SOFTWARE.
  */
 
-#include "internal.hpp"
+#pragma once
 
-brufs::status brufs::brufs::init() {
-    memcpy(this->header.magic, brufs::MAGIC_STRING, brufs::MAGIC_STRING_LENGTH);
+#include <string>
 
-    brufs::version lib_version;
-    brufs::get_version(lib_version);
+template <typename N>
+N prompt_number(const std::string &qry, const std::string &def, const char *format);
 
-    this->header.version = lib_version;
-    this->header_size = sizeof(brufs::header);
-    this->checksum = 0;
-    this->num_roots = 0;
-    this->num_root_buckets = this->;
-    this->cluster_size = 16384;
-}
+std::string prompt_string(const std::string &qry, const std::string &def, size_t max_len = 4096);

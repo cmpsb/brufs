@@ -20,15 +20,40 @@
  * SOFTWARE.
  */
 
-#pragma once
+#include <cstdio>
+#include <cassert>
+#include <cerrno>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
-#include "rtstructures.hpp"
-#include "btree-def-alloc.hpp"
-#include "btree-def-node.hpp"
-#include "btree-def-container.hpp"
+#include "fd_abst.hpp"
 
-namespace brufs {
+fd_abst::fd_abst(int file) : file(file) {
+    assert(file > 0);
+}
 
-void get_version(version &version);
+brufs::ssize fd_abst::read(void *buf, brufs::size count, brufs::address offset) const {
+    ssize_t status = pread(this->file, buf, count, offset);
+    if (status == -1) return brufs::status::E_ABSTIO_BASE + errno;
 
+    return status;
+}
+
+brufs::ssize fd_abst::write(const void *buf, brufs::size count, brufs::address offset) {
+    ssize_t status = pwrite(this->file, buf, count, offset);
+    if (status == -1) return brufs::status::E_ABSTIO_BASE + errno;
+
+    return status;
+}
+
+const char *fd_abst::strstatus(brufs::ssize eno) const {
+    return strerror(eno - brufs::status::E_ABSTIO_BASE);
+}
+
+brufs::size fd_abst::get_size() const {
+    struct stat st;
+    fstat(this->file, &st);
+
+    return static_cast<brufs::size>(st.st_size);
 }

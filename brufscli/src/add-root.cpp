@@ -20,15 +20,49 @@
  * SOFTWARE.
  */
 
-#pragma once
+#include <cstdio>
+#include <cstring>
+#include <cerrno>
 
-#include "rtstructures.hpp"
-#include "btree-def-alloc.hpp"
-#include "btree-def-node.hpp"
-#include "btree-def-container.hpp"
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <unistd.h>
 
-namespace brufs {
+#include "brufs.hpp"
 
-void get_version(version &version);
+#include "fd_abst.hpp"
+#include "prompt.hpp"
 
+int add_root(int argc, char **argv) {
+    if (argc < 2) {
+        fprintf(stderr, "Specify a file.\n");
+        return 2;
+    }
+
+    int iofd = open(argv[1], O_RDWR);
+    if (iofd == -1) {
+        fprintf(stderr, "Unable to open %s: %s", argv[1], strerror(errno));
+        return 1;
+    }
+
+    fd_abst io(iofd);
+    brufs::disk disk(&io);
+    brufs::brufs fs(&disk);
+
+    brufs::status status = fs.get_status();
+    if (status < brufs::status::OK) {
+        fprintf(stderr, "%s\n", brufs::strerror(status));
+        return 1;
+    }
+
+    std::string label = prompt_string("Label", "", brufs::MAX_LABEL_LENGTH - 1);
+    brufs::root_header root;
+    strncpy(root.label, label.c_str(), brufs::MAX_LABEL_LENGTH);
+
+    status = fs.add_root(root);
+
+    printf("%s\n", brufs::strerror(status));
+
+    return status != brufs::status::OK;
 }

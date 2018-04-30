@@ -59,7 +59,7 @@ node<K, V>::~node() {
 
 template<typename K, typename V>
 node<K, V> &node<K, V>::operator=(const node<K, V> &other) {
-    if (this->length != other.length) {
+    if (this->length != other.length || !this->buf) {
         this->~node();
         this->buf = static_cast<char *>(malloc(other.length));
         this->hdr = reinterpret_cast<header *>(this->buf);

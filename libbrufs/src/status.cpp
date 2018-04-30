@@ -32,6 +32,7 @@ const char *brufs::strerror(status eno) {
         case E_BAD_MAGIC: return "E_BAD_MAGIC";
         case E_FS_FROM_FUTURE: return "E_FS_FROM_FUTURE";
         case E_HEADER_TOO_BIG: return "E_HEADER_TOO_BIG";
+        case E_HEADER_TOO_SMALL: return "E_HEADER_TOO_SMALL";
         case E_CHECKSUM_MISMATCH: return "E_CHECKSUM_MISMATCH";
         case E_NO_SPACE: return "E_NO_SPACE";
         case E_WONT_FIT: return "E_WONT_FIT";
@@ -40,9 +41,13 @@ const char *brufs::strerror(status eno) {
         case E_AT_MAX_LEVEL: return "E_AT_MAX_LEVEL";
         case E_CANT_ADOPT: return "E_CANT_ADOPT";
         case E_MISALIGNED: return "E_MISALIGNED";
+        case E_NO_FBT: return "E_NO_FBT";
+        case E_NO_RHT: return "E_NO_RHT";
+        case E_EXISTS: return "E_EXISTS";
         case E_ABSTIO_BASE: return "E_ABSTIO_BASE";
         case OK: return "OK";
         case RETRY: return "RETRY";
+        case STOP: return "STOP";
         default: return "(?)";
     }
 }

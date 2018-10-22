@@ -22,18 +22,44 @@
 
 #pragma once
 
-#include <cstdint>
+#include <type_traits>
+#include <cstdlib>
+#include <cstring>
+
+#include "types.hpp"
+#include "xxhash/xxhash.h"
 
 namespace Brufs {
 
-using SSize = long long;
-using Offset = unsigned long long;
+static const Size MAX_LABEL_LENGTH = 256;
 
-using Address = uint64_t;
-using Size = uint64_t;
-using Hash = uint64_t;
+/**
+ * A directory entry
+ * 
+ * Entries are variable in size, due to the 
+ * 
+ */
+struct DirectoryEntry {
+    /**
+     * The name of the entry
+     * 
+     * At most MAX_LABEL_LENGTH characters long, with a NUL terminator if it's shorter than that.
+     */
+    char label[MAX_LABEL_LENGTH];
 
-using InodeId = __uint128_t;
-using OwnerId = __uint128_t;
+    InodeId inode_id;
+
+    Hash hash(const Hash seed = 14616742) const {
+        char lbl[MAX_LABEL_LENGTH + 1];
+        memcpy(lbl, this->label, MAX_LABEL_LENGTH);
+        lbl[MAX_LABEL_LENGTH] = 0;
+
+        return XXH64(this->label, strlen(lbl), seed);
+    }
+};
+static_assert(
+    std::is_standard_layout<DirectoryEntry>::value, "the directory entry structure must be standard-layout"
+);
+static_assert(sizeof(DirectoryEntry) <= 512, "a directory entry should fit in a block");
 
 }

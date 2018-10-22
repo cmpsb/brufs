@@ -19,21 +19,24 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-
 #pragma once
 
-#include <cstdint>
+#include <type_traits>
+
+#include "types.hpp"
+#include "Extent.hpp"
 
 namespace Brufs {
 
-using SSize = long long;
-using Offset = unsigned long long;
-
-using Address = uint64_t;
-using Size = uint64_t;
-using Hash = uint64_t;
-
-using InodeId = __uint128_t;
-using OwnerId = __uint128_t;
+struct CheckedExtent : public Extent {
+    /**
+     * The checksum of the data in the extent
+     */
+    Hash checksum;
+};
+static_assert(
+    std::is_standard_layout<CheckedExtent>::value, 
+    "the checked extent structure must be standard-layout"
+);
 
 }

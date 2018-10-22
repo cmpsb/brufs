@@ -3,8 +3,11 @@ set(SOURCE_FILES
     src/init.cpp
     src/check.cpp
     src/add-root.cpp
-    src/fd_abst.cpp
+    src/FdAbst.cpp
     src/prompt.cpp
+    src/ls.cpp
+    src/mkdir.cpp
+    src/Util.cpp
 )
 
 include_directories(${CMAKE_SOURCE_DIR}/libbrufs/include src)

@@ -64,6 +64,8 @@ std::string prompt_string(const std::string &qry, const std::string &def, size_t
         auto ret = std::string(buf);
         ret.pop_back();
 
+        delete[] buf;
+
         return ret;
     }
 }

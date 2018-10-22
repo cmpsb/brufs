@@ -22,18 +22,7 @@
 
 #pragma once
 
-#include <cstdint>
-
-namespace Brufs {
-
-using SSize = long long;
-using Offset = unsigned long long;
-
-using Address = uint64_t;
-using Size = uint64_t;
-using Hash = uint64_t;
-
-using InodeId = __uint128_t;
-using OwnerId = __uint128_t;
-
-}
+#include "Brufs.hpp"
+#include "Directory.hpp"
+#include "File.hpp"
+#include "String.hpp"

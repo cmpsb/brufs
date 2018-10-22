@@ -3,59 +3,59 @@
 TEST_CASE("Bm+trees can be inserted into and removed from", "[btree]") {
     while (!free_pages.empty()) free_pages.pop();
 
-    mem_abstio io(DISK_SIZE);
-    brufs::disk disk(&io);
-    brufs::brufs fs(&disk);
+    MemAbstIO io(DISK_SIZE);
+    Brufs::Disk disk(&io);
+    Brufs::Brufs fs(&disk);
 
     for (unsigned int i = 1; i < (DISK_SIZE / PAGE_SIZE); ++i) {
         free_pages.push(i * PAGE_SIZE);
     }
 
-    brufs::bmtree::bmtree<long, long> tree(
+    Brufs::BmTree::BmTree<long, long> tree(
         &fs, PAGE_SIZE, allocate_test_page, deallocate_test_page
     );
-    REQUIRE(tree.init() == brufs::status::OK);
+    REQUIRE(tree.init() == Brufs::Status::OK);
 
     SECTION("an empty tree has no values") {
-        brufs::size count;
-        REQUIRE(tree.count_values(count) == brufs::status::OK);
+        Brufs::Size count;
+        REQUIRE(tree.count_values(count) == Brufs::Status::OK);
         REQUIRE(count == 0);
     }
 
     SECTION("queries on an empty tree always error") {
         for (long i = -10; i <= 10; ++i) {
             long value;
-            REQUIRE(tree.remove(i, value) == brufs::status::E_NOT_FOUND);
+            REQUIRE(tree.remove(i, value) == Brufs::Status::E_NOT_FOUND);
         }
 
-        brufs::size count;
-        REQUIRE(tree.count_values(count) == brufs::status::OK);
+        Brufs::Size count;
+        REQUIRE(tree.count_values(count) == Brufs::Status::OK);
         REQUIRE(count == 0);
     }
 
     SECTION("can insert and then remove again") {
         const long key = 1122;
         const long init_value = 3344;
-        brufs::status status = tree.insert(key, init_value);
-        REQUIRE(status == brufs::status::OK);
+        Brufs::Status status = tree.insert(key, init_value);
+        REQUIRE(status == Brufs::Status::OK);
 
         long ret_value;
-        REQUIRE(tree.remove(key, ret_value) == brufs::status::OK);
+        REQUIRE(tree.remove(key, ret_value) == Brufs::Status::OK);
         REQUIRE(ret_value == init_value);
 
-        REQUIRE(tree.search(key, ret_value) == brufs::status::E_NOT_FOUND);
+        REQUIRE(tree.search(key, ret_value) == Brufs::Status::E_NOT_FOUND);
 
-        brufs::size count;
-        REQUIRE(tree.count_values(count) == brufs::status::OK);
+        Brufs::Size count;
+        REQUIRE(tree.count_values(count) == Brufs::Status::OK);
         REQUIRE(count == 0);
     }
 
     SECTION("can insert and query again many times") {
         for (long i = 0; i < 2400; ++i) {
             CAPTURE(i);
-            brufs::status status = tree.insert(i, i + 14616742);
-            if (status != brufs::status::OK) printf("%s\n", brufs::strerror(status));
-            REQUIRE(status == brufs::status::OK);
+            Brufs::Status status = tree.insert(i, i + 14616742);
+            if (status != Brufs::Status::OK) printf("%s\n", Brufs::strerror(status));
+            REQUIRE(status == Brufs::Status::OK);
         }
 
         if (0) {
@@ -76,8 +76,8 @@ TEST_CASE("Bm+trees can be inserted into and removed from", "[btree]") {
         for (long i = 0; i < 2400; ++i) {
             CAPTURE(i);
             long value;
-            brufs::status status = tree.remove(i, value);
-            if (status < 0) printf("%s\n", brufs::strerror(status));
+            Brufs::Status status = tree.remove(i, value, true);
+            if (status < 0) printf("%s\n", Brufs::strerror(status));
 
             // char fbuf[256];
             // snprintf(fbuf, 256, "trees/tree-%lu-%ld.puml", time(NULL), i);
@@ -92,16 +92,16 @@ TEST_CASE("Bm+trees can be inserted into and removed from", "[btree]") {
             // fprintf(f, "hide empty fields\nhide empty methods\nhide << value >> stereotype\nhide << value >> circle\n@enduml\n");
             // fclose(f);
 
-            REQUIRE(status == brufs::status::OK);
+            REQUIRE(status == Brufs::Status::OK);
             REQUIRE(value == i + 14616742);
 
             status = tree.search(i, value, true);
-            if (status != brufs::status::E_NOT_FOUND) printf("%s\n", brufs::strerror(status));
-            REQUIRE(status == brufs::status::E_NOT_FOUND);
+            if (status != Brufs::Status::E_NOT_FOUND) printf("%s\n", Brufs::strerror(status));
+            REQUIRE(status == Brufs::Status::E_NOT_FOUND);
         }
 
-        brufs::size count;
-        REQUIRE(tree.count_values(count) == brufs::status::OK);
+        Brufs::Size count;
+        REQUIRE(tree.count_values(count) == Brufs::Status::OK);
         REQUIRE(count == 0);
     }
 
@@ -132,8 +132,8 @@ TEST_CASE("Bm+trees can be inserted into and removed from", "[btree]") {
         std::shuffle(kvs.begin(), kvs.end(), reng);
 
         for (const auto kv : kvs) {
-            brufs::status status = tree.insert(kv.k, kv.v);
-            REQUIRE(status == brufs::status::OK);
+            Brufs::Status status = tree.insert(kv.k, kv.v);
+            REQUIRE(status == Brufs::Status::OK);
         }
 
         std::shuffle(kvs.begin(), kvs.end(), reng);
@@ -144,9 +144,9 @@ TEST_CASE("Bm+trees can be inserted into and removed from", "[btree]") {
             CAPTURE(kv.k);
             long value;
 
-            brufs::status status = tree.remove(kv.k, value);
-            if (status < 0) printf("%s\n", brufs::strerror(status));
-            REQUIRE(status == brufs::status::OK);
+            Brufs::Status status = tree.remove(kv.k, value);
+            if (status < 0) printf("%s\n", Brufs::strerror(status));
+            REQUIRE(status == Brufs::Status::OK);
 
             results.insert({ kv.k, value });
         }
@@ -156,8 +156,8 @@ TEST_CASE("Bm+trees can be inserted into and removed from", "[btree]") {
 
         REQUIRE(std::includes(vset.begin(), vset.end(), results.begin(), results.end()));
 
-        brufs::size count;
-        REQUIRE(tree.count_values(count) == brufs::status::OK);
+        Brufs::Size count;
+        REQUIRE(tree.count_values(count) == Brufs::Status::OK);
         REQUIRE(count == 0);
     }
 }

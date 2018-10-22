@@ -1,4 +1,4 @@
-/*
+/*b+tree
  * Copyright (c) 2017-2018 Luc Everse <luc@cmpsb.net>
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -20,36 +20,44 @@
  * SOFTWARE.
  */
 
-#pragma once
+#include <cstdio>
+#include <cassert>
+#include <cerrno>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
-#include "rtstructures.hpp"
+#include "FdAbst.hpp"
 
-namespace brufs { namespace bmtree {
-
-/**
- * Allocates blocks using a separate pool of blocks where the free blocks tree should pull
- * free blocks from, to prevent deadlocks.
- */
-static inline status ALLOC_FBT_BLOCK(brufs &fs, size length, extent &target) {
-    return fs.allocate_tree_blocks(length, target);
+FdAbst::FdAbst(int file) : file(file) {
+    assert(file > 0);
 }
 
-/**
- * Will never allocate a new block, returning E_NO_SPACE instead.
- */
-static inline status ALLOC_NEVER(brufs &fs, size length, extent &target) {
-    (void) fs;
-    (void) length;
-    (void) target;
-    return status::E_NO_SPACE;
+Brufs::SSize FdAbst::read(void *buf, Brufs::Size count, Brufs::Address offset) const {
+    printf("rd %lu @ 0x%lX\n", count, offset);
+    ssize_t status = pread(this->file, buf, count, offset);
+    if (status == -1) return Brufs::Status::E_ABSTIO_BASE + errno;
+
+    return status;
 }
 
-static inline status ALLOC_NORMAL(brufs &fs, size length, extent &target) {
-    return fs.allocate_blocks(length, target);
+Brufs::SSize FdAbst::write(const void *buf, Brufs::Size count, Brufs::Address offset) {
+    printf("wt %lu @ 0x%lX\n", count, offset);
+
+    ssize_t status = pwrite(this->file, buf, count, offset);
+    if (status == -1) return Brufs::Status::E_ABSTIO_BASE + errno;
+
+    return status;
 }
 
-static inline void DEALLOC_NORMAL(brufs &fs, const extent &ext) {
-    fs.free_blocks(ext);
+const char *FdAbst::strstatus(Brufs::SSize eno) const {
+    if (eno < Brufs::E_ABSTIO_BASE) return Brufs::strerror(static_cast<Brufs::Status>(eno));
+    return strerror(eno - Brufs::Status::E_ABSTIO_BASE);
 }
 
-}}
+Brufs::Size FdAbst::get_size() const {
+    struct stat st;
+    fstat(this->file, &st);
+
+    return static_cast<Brufs::Size>(st.st_size);
+}

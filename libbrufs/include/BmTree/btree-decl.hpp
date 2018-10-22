@@ -27,15 +27,14 @@
 #include <cstdlib>
 #include <new>
 
-#include "types.hpp"
-#include "status.hpp"
-#include "structures.hpp"
+#include "../Status.hpp"
+#include "../Extent.hpp"
 
-namespace brufs { 
+namespace Brufs {
 
-class brufs;
+class Brufs;
 
-namespace bmtree {
+namespace BmTree {
 
 /**
  * Allocates one or more blocks to store tree data in.
@@ -46,24 +45,35 @@ namespace bmtree {
  * 
  * @return a status code whether allocation succeeded or failed
  */
-using allocator = status (*)(brufs &fs, size length, extent &target);
+using Allocator = Status (*)(Brufs &fs, Size length, Extent &target);
 
 /**
  * Allocates blocks using the usual free blocks tree.
  */
-static inline status ALLOC_NORMAL(brufs &, size, extent &);
+static inline Status ALLOC_NORMAL(Brufs &, Size, Extent &);
 
-using deallocator = void (*)(brufs &fs, const extent &ext);
+using Deallocator = Status (*)(Brufs &fs, const Extent &ext);
 
-static inline void DEALLOC_NORMAL(brufs &, const extent &);
+static inline Status DEALLOC_NORMAL(Brufs &, const Extent &);
 
 template <typename V, typename P>
-using entry_consumer = status (*)(V &item, P &pl);
+using EntryConsumer = Status (*)(V &item, P pl);
+
+template <typename V>
+using ContextlessEntryConsumer = Status (*)(V &item);
+
+template <typename V>
+bool equiv_values(const V *current, const V *replacement) {
+    (void) current;
+    (void) replacement;
+
+    return true;
+}
 
 /**
  * The header of a Bm+tree node.
  */
-struct header {
+struct Header {
     /**
      * The magic header "B+" marking this as a Bm+tree.
      */
@@ -84,36 +94,39 @@ struct header {
      */
     uint32_t num_values;
 
-    header(uint8_t level = 0, uint32_t num_values = 0) : 
-        magic {'B', '+'}, level(level), size(sizeof(header)), num_values(num_values)
+    Header(uint8_t level = 0, uint32_t num_values = 0) : 
+        magic {'B', '+'},
+        level(level),
+        size(sizeof(Header)),
+        num_values(num_values)
     {}
 };
-static_assert(std::is_standard_layout<header>::value);
-static_assert(sizeof(header) % 8 == 0);
+static_assert(std::is_standard_layout<Header>::value);
+static_assert(sizeof(Header) % 8 == 0);
 
 template <typename K, typename V>
-class node;
+class Node;
 
 /**
  * A B+tree with flexible index prediction.
  * 
  * @tparam K the key type
  * @tparam V the value type in the leaves
- * @tparam A the allocator function to use
+ * @tparam A the Allocator function to use
  * @tparam C the comparator function to use
  */
 template <typename K, typename V>
-class bmtree {
+class BmTree {
 private:
     /**
      * The filesystem the Bm+tree resides on.
      */
-    brufs *fs;
+    Brufs *fs;
 
     /**
      * The size of a node in bytes.
      */
-    size length;
+    Size length;
 
     /**
      * The maximum number of attempts the tree may make to insert new values in a nearly full tree.
@@ -121,18 +134,20 @@ private:
      */
     unsigned int max_level;
 
-    /**
-     * The allocator to use.
-     */
-    allocator alloctr;
+    unsigned int value_size;
 
-    deallocator dealloctr;
+    /**
+     * The Allocator to use.
+     */
+    Allocator alloctr;
+
+    Deallocator dealloctr;
 
     /**
      * The root of the tree.
      */
-    node<K, V> root;
-    friend node<K, V>;
+    Node<K, V> root;
+    friend Node<K, V>;
 
     /**
      * Allocates a block for the tree.
@@ -142,9 +157,9 @@ private:
      * 
      * @return a status return code
      */
-    status alloc(size length, extent &target);
+    Status alloc(Size length, Extent &target);
 
-    void free(const extent &ext);
+    Status free(const Extent &ext);
 
 public:
     /**
@@ -155,33 +170,61 @@ public:
      * @param length the size of each node in the tree
      * @param max_level the maximum level of nodes in the tree
      */
-    bmtree(brufs *fs, address addr, size length, 
-           allocator alloc = ALLOC_NORMAL, deallocator dealloc = DEALLOC_NORMAL,
+    BmTree(Brufs *fs, Address addr, Size length, 
+           Allocator alloc = ALLOC_NORMAL, Deallocator dealloc = DEALLOC_NORMAL,
            unsigned int max_level = 5);
 
-    bmtree(brufs *fs, size length, 
-           allocator alloc = ALLOC_NORMAL, deallocator dealloc = DEALLOC_NORMAL,
+    BmTree(Brufs *fs, Size length, 
+           Allocator alloc = ALLOC_NORMAL, Deallocator dealloc = DEALLOC_NORMAL,
            unsigned int max_level = 5);
 
-    bmtree(const bmtree<K, V> &other);
+    BmTree(const BmTree<K, V> &other);
 
-    bmtree<K, V> &operator=(const bmtree<K, V> &other);
+    BmTree<K, V> &operator=(const BmTree<K, V> &other);
 
-    status init(size new_length = 0);
+    Status init(Size new_length = 0);
 
-    status search(const K key, V &value, bool strict = false);
-    int search(const K key, V *value, int max, bool strict = false);
-
-    status insert(const K key, const V value);
-
-    status remove(const K key, V &value, bool strict = false);
-
-    status count_values(size &count);
+    Status search(const K key, V *value, bool exact = false);
+    Status search(const K key, V &value, bool exact = false) { 
+        return this->search(key, &value, exact); 
+    }
 
     template <typename P>
-    status walk(entry_consumer<V, P> consumer, P &pl);
+    int search(const K key, P *value, int max, bool exact = false);
 
-    int pretty_print_root(char *buf, size len);
+    Status get_first(V *value);
+    Status get_first(V &value) { return this->get_first(&value); }
+
+    Status get_last(V *value);
+    Status get_last(V &value) { return this->get_last(&value); }
+
+    Status insert(const K key, const V *value, bool collide = false);
+    Status insert(const K key, const V &value, bool collide = false) {
+        return this->insert(key, &value, collide);
+    }
+
+    Status update(const K key, const V *value);
+    Status update(const K key, const V &value) { return this->update(key, &value); }
+
+    Status remove(const K key, V *value, bool exact = false);
+    Status remove(const K key, V &value, bool exact = false) {
+        return this->remove(key, &value, exact);
+    }
+
+    Status count_values(Size &count);
+    Status count_used_space(Size &size);
+
+    template <typename P>
+    Status destroy(EntryConsumer<V, P> destroyer, P pl);
+    Status destroy(ContextlessEntryConsumer<V> destroyer);
+    Status destroy();
+
+    template <typename P>
+    Status walk(EntryConsumer<V, P> consumer, P pl);
+
+    Status walk(ContextlessEntryConsumer<V> consumer);
+
+    int pretty_print_root(char *buf, Size len);
 
     /**
      * @brief [brief description]
@@ -189,17 +232,26 @@ public:
      * 
      * @param new_addr [description]
      */
-    void update_root(address new_addr, size length = 0);
+    Status update_root(Address new_addr, Size length = 0);
 
-    virtual void on_root_change(address new_root) {
+    virtual Status on_root_change(Address new_root) {
         (void) new_root;
+        return Status::OK;
+    }
+
+    void set_value_size(unsigned int value_size) {
+        this->value_size = value_size;
+    }
+
+    auto get_value_size() const {
+        return this->value_size;
     }
 };
 
 /**
  * A node in the Bm+tree.
  * 
- * If this is not a leaf node, then the values will have the brufs::address type.
+ * If this is not a leaf node, then the values will have the Brufs::address type.
  * The V template parameter should still be the leaf type, however.
  * 
  * @tparam K the key type
@@ -208,26 +260,26 @@ public:
  * @tparam C the comparator function to use
  */
 template <typename K, typename V>
-struct node {
+struct Node {
     /**
      * The filesystem this node resides on.
      */
-    brufs *fs;
+    Brufs *fs;
 
     /**
      * The address this node starts at.
      */
-    address addr;
+    Address addr;
 
     /**
      * The size of this node in bytes.
      */
-    size length;
+    Size length;
 
     /**
-     * The containing bmtree keeping track of the root of the tree.
+     * The containing BmTree keeping track of the root of the tree.
      */
-    bmtree<K, V> *container;
+    BmTree<K, V> *container;
 
     /**
      * The memory buffer the actual node data resides in.
@@ -237,12 +289,12 @@ struct node {
     /**
      * The portion of the buffer representing this node's on-disk header.
      */
-    header *hdr;
+    Header *hdr;
 
     /**
      * The parent of this node.
      */
-    class node<K, V> *parent;
+    class Node<K, V> *parent;
 
     /**
      * The index of the address in the parent pointing to this node.
@@ -258,8 +310,8 @@ struct node {
      * @param container the managing container representing the entire tree
      * @param parent the parent of this node (if any; NULL if this is the root)
      */
-    node(brufs *fs, address addr, size length, bmtree<K, V> *container, 
-         node<K, V> *parent = nullptr, unsigned int index_in_parent = UINT_MAX);
+    Node(Brufs *fs, Address addr, Size length, BmTree<K, V> *container, 
+         Node<K, V> *parent = nullptr, unsigned int index_in_parent = UINT_MAX);
 
     /**
      * Creates a new node not backed by any on-disk structure.
@@ -267,7 +319,7 @@ struct node {
      * @param fs the filesystem the tree belongs to
      * @param container the managing container representing the entire tree
      */
-    node(brufs *fs, bmtree<K, V> *container);
+    Node(Brufs *fs, BmTree<K, V> *container);
 
     /**
      * Copies another node.
@@ -275,12 +327,12 @@ struct node {
      * 
      * @param other the node to copy
      */
-    node(const node<K, V> &other);
+    Node(const Node<K, V> &other);
 
     /**
      * Destructs the node, while retaining the data on-disk.
      */
-    ~node();
+    ~Node();
 
     /**
      * Copies another node into this instance.
@@ -288,21 +340,27 @@ struct node {
      * 
      * @param other the node to copy
      */
-    node<K, V> &operator=(const node<K, V> &other);
+    Node<K, V> &operator=(const Node<K, V> &other);
 
     /**
      * Initializes the node.
      * 
      * @return a status code
      */
-    status init();
+    Status init();
+
+    /**
+     * Returns the size of the value type in bytes.
+     * 
+     * @return the size of the value type
+     */
+    auto get_record_size();
 
     /**
      * Returns the maximum possible amount of values (and thus also keys) this node can contain.
      * 
      * @tparam R the type of value this node stores
      */
-    template <typename R>
     auto get_cap();
 
     /**
@@ -314,6 +372,9 @@ struct node {
     template <typename R>
     R *get_values();
 
+    template <typename R>
+    R *get_value(unsigned int idx);
+
     /**
      * Returns a pointer into the in-memory buffer to the first key in the node.
      * 
@@ -324,26 +385,26 @@ struct node {
     /**
      * Returns a pointer to the link to the previous node.
      */
-    address *get_link();
+    Address *get_link();
 
     /**
      * Returns a reference to the address of the previous node.
      */
-    address &prev();
+    Address &prev();
     
     /**
      * Loads the node from disk.
      *
      * @return a status code
      */
-    status load();
+    Status load();
 
     /**
      * Writes the node to disk.
      * 
      * @return a status code
      */
-    status store();
+    Status store();
 
     /**
      * Finds the index of the best match for the search key.
@@ -353,7 +414,7 @@ struct node {
      * 
      * @return E_NOT_FOUND if no match could be found, OK otherwise
      */
-    status locate(const K &key, unsigned int &result);
+    Status locate(const K &key, unsigned int &result);
 
     /**
      * Finds the index of the best match for the search key.
@@ -363,7 +424,7 @@ struct node {
      * 
      * @return E_NOT_FOUND if no match could be found, OK otherwise
      */
-    status locate_in_leaf(const K &key, unsigned int &result);
+    Status locate_in_leaf(const K &key, unsigned int &result);
 
     /**
      * Finds the index of the exact match for the search key.
@@ -373,7 +434,7 @@ struct node {
      * 
      * @return E_NOT_FOUND if no match could be found, OK otherwise
      */
-    status locate_in_leaf_strict(const K &key, unsigned int &result);
+    Status locate_in_leaf_strict(const K &key, unsigned int &result);
 
     /**
      * Looks up the value associated with the key.
@@ -384,15 +445,18 @@ struct node {
      * 
      * @return a status code; OK if the key was found, E_NOT_FOUND if it wasn't
      */
-    status search(const K &key, V &value, bool strict);
+    Status search(const K &key, V *value, bool exact);
 
-    int search_all(const K &key, V *value, int max, bool strict);
-    int copy_while(const K &key, V *value, unsigned int start, int max, bool strict);
+    int search_all(const K &key, uint8_t *value, int max, bool exact);
+    int copy_while(const K &key, uint8_t *value, unsigned int start, int max, bool exact);
 
-    status insert_initial(const K &key, address left, address right);
+    Status get_first(V *value);
+    Status get_last(V *value);
+
+    Status insert_initial(const K &key, Address left, Address right);
 
     template <typename R>
-    status split(const K &key, const R &value);
+    Status split(const K &key, const R *value);
 
     /**
      * Inserts a value in this node, without walking the rest of the tree.
@@ -404,7 +468,7 @@ struct node {
      * @return a status code
      */
     template <typename R>
-    status insert_direct(const K &key, const R &value);
+    Status insert_direct(const K &key, const R *value, bool collide = false);
 
     /**
      * Inserts a value in this part of the (sub-)tree.
@@ -414,25 +478,37 @@ struct node {
      * 
      * @return a status code
      */
-    status insert(const K &key, const V &value);
+    Status insert(const K &key, const V *value, bool collide);
 
-    status remove(const K &key, V &value, bool strict);
+    Status update(const K &key, const V *value);
 
-    template <typename R>
-    status adopt(node *adoptee);
-
-    template <typename R>
-    status abduct_highest(node &node);
+    Status remove(const K &key, V *value, bool exact);
 
     template <typename R>
-    status abduct_lowest(node &node);
+    Status adopt(Node *adoptee);
 
     template <typename R>
-    status remove_direct(unsigned int idx);
+    Status abduct_highest(Node &node);
 
-    status get_last_leaf(address &target);
+    template <typename R>
+    Status abduct_lowest(Node &node);
 
-    int pretty_print(char *buf, size len, bool reload = true);
+    template <typename R>
+    Status remove_direct(unsigned int idx);
+
+    Status get_last_leaf(Address &target);
+
+    template <typename P>
+    Status destroy(EntryConsumer<V, P> destroyer, P &pl);
+
+    Status count_used_space(Size &size);
+
+    int pretty_print(char *buf, Size len, bool reload = true);
+    //     (void) buf;
+    //     (void) len;
+    //     (void) reload;
+    //     return 0; 
+    // }
 };
 
 }}

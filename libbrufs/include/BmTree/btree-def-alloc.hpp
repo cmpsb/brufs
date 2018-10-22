@@ -20,17 +20,38 @@
  * SOFTWARE.
  */
 
-#include "brufs.hpp"
+#pragma once
 
-class fd_abst : public brufs::abstio {
-    int file;
+#include "types.hpp"
+#include "Brufs.hpp"
+#include "Extent.hpp"
 
-public:
-    fd_abst(int file);
-    ~fd_abst() override {}
+namespace Brufs { namespace BmTree {
 
-    brufs::ssize read(void *buf, brufs::size count, brufs::address offset) const override;
-    brufs::ssize write(const void *buf, brufs::size count, brufs::address offset) override;
-    const char *strstatus(brufs::ssize eno) const override;
-    brufs::size get_size() const override;
-};
+/**
+ * Allocates blocks using a separate pool of blocks where the free blocks tree should pull
+ * free blocks from, to prevent deadlocks.
+ */
+static inline Status ALLOC_FBT_BLOCK(Brufs &fs, Size length, Extent &target) {
+    return fs.allocate_tree_blocks(length, target);
+}
+
+/**
+ * Will never allocate a new block, returning E_NO_SPACE instead.
+ */
+static inline Status ALLOC_NEVER(Brufs &fs, Size length, Extent &target) {
+    (void) fs;
+    (void) length;
+    (void) target;
+    return Status::E_NO_SPACE;
+}
+
+static inline Status ALLOC_NORMAL(Brufs &fs, Size length, Extent &target) {
+    return fs.allocate_blocks(length, target);
+}
+
+static inline Status DEALLOC_NORMAL(Brufs &fs, const Extent &ext) {
+    return fs.free_blocks(ext);
+}
+
+}}

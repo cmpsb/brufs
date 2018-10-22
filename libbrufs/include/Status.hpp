@@ -24,18 +24,23 @@
 
 #include <limits.h>
 
-namespace brufs {
+namespace Brufs {
 
 /**
  * A status code.
  * Negative values indicate an error, 0 indicates nominal success.
  */
-enum status {
+enum Status {
     /**
      * An internal error that can't be explained.
      * The library should try to NEVER generate this status.
      */
     E_INTERNAL = INT_MIN,
+
+    /**
+     * The argument was invalid (e.g., null).
+     */
+    E_INVALID_ARGUMENT,
 
     /**
      * A dynamic memory allocated failed.
@@ -120,6 +125,32 @@ enum status {
     E_EXISTS,
 
     /**
+     * Too many collisions.
+     */
+    E_PILEUP,
+
+    /**
+     * The file offset is beyonde the end of the file.
+     */
+    E_BEYOND_EOF,
+
+    /**
+     * A callback requested to operation to be stopped, but this left the system in an unstable
+     * state.
+     */
+    E_STOPPED,
+
+    /**
+     * The requested operation is not valid for the inode's type.
+     */
+    E_WRONG_INODE_TYPE,
+
+    /**
+     * The path does not contain a root.
+     */
+    E_NO_ROOT,
+
+    /**
      * Not a real error, but rather the lowest possible I/O abstraction status code
      */
     E_ABSTIO_BASE = INT_MIN >> 1,
@@ -141,6 +172,6 @@ enum status {
     STOP
 };
 
-const char *strerror(status eno);
+const char *strerror(Status eno);
 
 }

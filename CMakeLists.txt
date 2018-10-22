@@ -4,7 +4,7 @@ cmake_policy(SET CMP0048 NEW)
 project(brufs LANGUAGES C CXX VERSION 0.0.1)
 set(CMAKE_CXX_STANDARD 17)
 
-set(CMAKE_CXX_FLAGS "-g -O0 -Wall -Wextra -pedantic")
+set(CMAKE_CXX_FLAGS "-g -Og -Wall -Wextra -pedantic")
 
 set(BRUFS_VERSION_MAJOR ${PROJECT_VERSION_MAJOR})
 set(BRUFS_VERSION_MINOR ${PROJECT_VERSION_MINOR})

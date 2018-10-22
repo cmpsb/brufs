@@ -26,14 +26,13 @@
 
 namespace Brufs {
 
-using SSize = long long;
-using Offset = unsigned long long;
-
-using Address = uint64_t;
-using Size = uint64_t;
-using Hash = uint64_t;
-
-using InodeId = __uint128_t;
-using OwnerId = __uint128_t;
+enum InodeType {
+    NONE,
+    FILE,
+    DIRECTORY,
+    HARD_LINK,
+    SOFT_LINK,
+    LIST_END
+};
 
 }

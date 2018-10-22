@@ -22,18 +22,14 @@
 
 #pragma once
 
-#include <cstdint>
+#include "AbstIO.hpp"
 
 namespace Brufs {
 
-using SSize = long long;
-using Offset = unsigned long long;
+struct Disk {
+    AbstIO *io;
 
-using Address = uint64_t;
-using Size = uint64_t;
-using Hash = uint64_t;
-
-using InodeId = __uint128_t;
-using OwnerId = __uint128_t;
+    Disk(AbstIO *io) : io(io) {}
+};
 
 }

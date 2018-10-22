@@ -19,16 +19,49 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-
 #pragma once
 
-#include "rtstructures.hpp"
-#include "btree-def-alloc.hpp"
-#include "btree-def-node.hpp"
-#include "btree-def-container.hpp"
+#include <type_traits>
 
-namespace brufs {
+#include "types.hpp"
 
-void get_version(version &version);
+namespace Brufs {
+
+/**
+ * An extent describing the start of a contiguous bunch of data and how long it is
+ */
+struct Extent {
+    /**
+     * The start LBA of the extent
+     */
+    Address offset;
+
+    /**
+     * The length of the extent in blocks
+     */
+    Size length;
+
+    Extent() {}
+
+    Extent(const Extent &other) = default;
+    template <typename T>
+    Extent(const T &other) : offset(other.offset), length(other.length) {}
+    Extent(Address offset, Size length) : offset(offset), length(length) {}
+
+    auto operator==(const Extent &other) const {
+        return this->offset == other.offset && this->length == other.length;
+    }
+
+    Offset get_end() {
+        return this->offset + length;
+    }
+
+    Offset get_last() {
+        return this->get_end() - 1;
+    }
+};
+static_assert(
+    std::is_standard_layout<Extent>::value, "the extent structure must be standard-layout"
+);
 
 }

@@ -22,18 +22,9 @@
 
 #pragma once
 
-#include <cstdint>
+#include "libbrufs.hpp"
 
-namespace Brufs {
-
-using SSize = long long;
-using Offset = unsigned long long;
-
-using Address = uint64_t;
-using Size = uint64_t;
-using Hash = uint64_t;
-
-using InodeId = __uint128_t;
-using OwnerId = __uint128_t;
-
-}
+class Util {
+public:
+    static Brufs::String pretty_print_bytes(Brufs::Size bytes);
+};

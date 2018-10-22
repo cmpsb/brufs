@@ -20,20 +20,6 @@
  * SOFTWARE.
  */
 
-#pragma once
+#include "AbstIO.hpp"
 
-#include <cstdint>
-
-namespace Brufs {
-
-using SSize = long long;
-using Offset = unsigned long long;
-
-using Address = uint64_t;
-using Size = uint64_t;
-using Hash = uint64_t;
-
-using InodeId = __uint128_t;
-using OwnerId = __uint128_t;
-
-}
+Brufs::AbstIO::~AbstIO() {}

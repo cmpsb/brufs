@@ -20,10 +20,10 @@
  * SOFTWARE.
  */
 
-#include "internal.hpp"
+#include "Status.hpp"
 
-const char *brufs::strerror(status eno) {
-    if (eno >= status::E_ABSTIO_BASE && eno < 0) return "(see abstio)";
+const char *Brufs::strerror(Status eno) {
+    if (eno >= Status::E_ABSTIO_BASE && eno < 0) return "(see abstio)";
 
     switch (eno) {
         case E_INTERNAL: return "E_INTERNAL";
@@ -44,6 +44,10 @@ const char *brufs::strerror(status eno) {
         case E_NO_FBT: return "E_NO_FBT";
         case E_NO_RHT: return "E_NO_RHT";
         case E_EXISTS: return "E_EXISTS";
+        case E_PILEUP: return "E_PILEUP";
+        case E_BEYOND_EOF: return "E_BEYOND_EOF";
+        case E_STOPPED: return "E_STOPPED";
+        case E_WRONG_INODE_TYPE: return "E_WRONG_INODE_TYPE";
         case E_ABSTIO_BASE: return "E_ABSTIO_BASE";
         case OK: return "OK";
         case RETRY: return "RETRY";

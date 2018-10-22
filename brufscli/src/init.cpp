@@ -29,9 +29,9 @@
 #include <fcntl.h>
 #include <unistd.h>
 
-#include "brufs.hpp"
+#include "libbrufs.hpp"
 
-#include "fd_abst.hpp"
+#include "FdAbst.hpp"
 
 int init(int argc, char **argv) {
     if (argc < 2) {
@@ -45,20 +45,20 @@ int init(int argc, char **argv) {
         return 1;
     }
 
-    fd_abst io(iofd);
-    brufs::disk disk(&io);
-    brufs::brufs fs(&disk);
+    FdAbst io(iofd);
+    Brufs::Disk disk(&io);
+    Brufs::Brufs fs(&disk);
 
-    brufs::header proto;
-    proto.cluster_size_exp = 14;
-    proto.sc_low_mark = 6;
-    proto.sc_high_mark = 12;
+    Brufs::Header proto;
+    proto.cluster_size_exp = 12;
+    proto.sc_low_mark = 12;
+    proto.sc_high_mark = 24;
 
-    brufs::status status = fs.init(proto);
+    Brufs::Status status = fs.init(proto);
 
-    fprintf(stderr, "%s\n", brufs::strerror(status));
+    fprintf(stderr, "%s\n", Brufs::strerror(status));
 
     close(iofd);
 
-    return status != brufs::status::OK;
+    return status != Brufs::Status::OK;
 }

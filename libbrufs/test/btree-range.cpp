@@ -3,16 +3,16 @@
 TEST_CASE("Bm+trees can be queried by range or collisions", "[btree][htree]") {
     while (!free_pages.empty()) free_pages.pop();
 
-    mem_abstio io(DISK_SIZE);
-    brufs::disk disk(&io);
-    brufs::brufs fs(&disk);
+    MemAbstIO io(DISK_SIZE);
+    Brufs::Disk disk(&io);
+    Brufs::Brufs fs(&disk);
 
     for (unsigned int i = 1; i < (DISK_SIZE / PAGE_SIZE); ++i) {
         free_pages.push(i * PAGE_SIZE);
     }
 
-    brufs::bmtree::bmtree<int, int> tree(&fs, PAGE_SIZE, allocate_test_page, deallocate_test_page);
-    REQUIRE(tree.init() == brufs::status::OK);
+    Brufs::BmTree::BmTree<int, int> tree(&fs, PAGE_SIZE, allocate_test_page, deallocate_test_page);
+    REQUIRE(tree.init() == Brufs::Status::OK);
 
     SECTION("can query ranges") {
         const int max_values = 10000;

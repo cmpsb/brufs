@@ -20,20 +20,17 @@
  * SOFTWARE.
  */
 
-#pragma once
+#include "libbrufs.hpp"
 
-#include <cstdint>
+class FdAbst : public Brufs::AbstIO {
+    int file;
 
-namespace Brufs {
+public:
+    FdAbst(int file);
+    ~FdAbst() override {}
 
-using SSize = long long;
-using Offset = unsigned long long;
-
-using Address = uint64_t;
-using Size = uint64_t;
-using Hash = uint64_t;
-
-using InodeId = __uint128_t;
-using OwnerId = __uint128_t;
-
-}
+    Brufs::SSize read(void *buf, Brufs::Size count, Brufs::Address offset) const override;
+    Brufs::SSize write(const void *buf, Brufs::Size count, Brufs::Address offset) override;
+    const char *strstatus(Brufs::SSize eno) const override;
+    Brufs::Size get_size() const override;
+};

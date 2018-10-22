@@ -1,11 +1,16 @@
 set(SOURCE_FILES
-    src/brufs.cpp
-    src/dust.cpp
-    src/header.cpp
+    src/Brufs.cpp
+    src/AbstIO.cpp
+    src/Header.cpp
     src/iohelp.cpp
+    src/Root.cpp
     src/status.cpp
-    src/version.cpp
+    src/Version.cpp
     src/xxhash/xxhash.c
+    src/File.cpp
+    src/Directory.cpp
+    src/Inode.cpp
+    src/Timestamp.cpp
 )
 
 set(TEST_FILES
@@ -14,9 +19,10 @@ set(TEST_FILES
     test/btree-extent-values.cpp
     test/btree-range.cpp
     test/btree-remove.cpp
+    test/btree-update.cpp
 )
 
-configure_file(cmake/version.in.hpp version.hpp)
+configure_file(cmake/version.in.hpp version-info.hpp)
 
 include_directories(include ${CMAKE_CURRENT_BINARY_DIR})
 

@@ -24,11 +24,11 @@
 
 #include "types.hpp"
 
-namespace brufs {
+namespace Brufs {
 
-class disk;
+class Disk;
 
-ssize dread(disk *dsk, void *buf, size count, address offset);
-ssize dwrite(disk *dsk, const void *buf, size count, address offset);
+SSize dread(Disk *dsk, void *buf, Size count, Address offset);
+SSize dwrite(Disk *dsk, const void *buf, Size count, Address offset);
 
 }

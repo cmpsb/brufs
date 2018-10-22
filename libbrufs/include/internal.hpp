@@ -22,9 +22,7 @@
 
 #pragma once
 
-#include "brufs.hpp"
-#include "structures.hpp"
-#include "rtstructures.hpp"
+#include "types.hpp"
 
 #define UNUSED __attribute__((unused))
 
@@ -33,18 +31,69 @@ static inline N updiv(N divident, N divisor) {
     return (divident + divisor - 1) / divisor;
 }
 
-// namespace std {
-//     template<typename T>
-//     static inline constexpr T min(T etaoin, T shrdlu) {
-//         return (etaoin < shrdlu) ? etaoin : shrdlu;
-//     }
+namespace Brufs {
 
-//     template<typename T>
-//     static inline constexpr T max(T etaoin, T shrdlu) {
-//         return (etaoin > shrdlu) ? etaoin : shrdlu;
-//     }
-// }
+static const Hash CHECKSUM_SEED = 14616742;
+static const Hash HASH_SEED = CHECKSUM_SEED;
 
-#include "btree-def-alloc.hpp"
-#include "btree-def-container.hpp"
-#include "btree-def-node.hpp"
+static const Size BLOCK_SIZE = 512;
+
+static const Address NULL_BLOCK = 0;
+
+static constexpr int MAX_COLLISIONS = 32;
+
+static constexpr inline bool is_valid_size(Size size) {
+    return (size & (BLOCK_SIZE - 1)) == 0;
+}
+
+template <typename T>
+static constexpr inline bool is_power_of_two(T v) {
+    // https://graphics.stanford.edu/~seander/bithacks.html#DetermineIfPowerOf2
+    return v && !(v & (v - 1));
+}
+
+template <typename T>
+static constexpr inline T previous_power_of_two(T x) {
+    x |= (x >> 1);
+    x |= (x >> 2);
+    x |= (x >> 4);
+    x |= (x >> 8);
+    x |= (x >> 16);
+    x |= (x >> 32);
+    return x - (x >> 1);
+}
+
+template <typename T>
+static constexpr inline T next_power_of_two(T x) {
+    --x;
+    x |= (x >> 1);
+    x |= (x >> 2);
+    x |= (x >> 4);
+    x |= (x >> 8);
+    x |= (x >> 16);
+    x |= (x >> 32);
+    ++x;
+    return x;
+}
+
+template <typename T>
+static constexpr inline T previous_multiple_of(T multiple, T base) {
+    return ((multiple - base + 1) / base) * base;
+}
+
+template <typename T>
+static constexpr inline T next_multiple_of(T multiple, T base) {
+    return ((multiple + base - 1) / base) * base;
+}
+
+template<typename T>
+static inline constexpr T min(T etaoin, T shrdlu) {
+    return (etaoin < shrdlu) ? etaoin : shrdlu;
+}
+
+template<typename T>
+static inline constexpr T max(T etaoin, T shrdlu) {
+    return (etaoin < shrdlu) ? shrdlu : etaoin;
+}
+
+}

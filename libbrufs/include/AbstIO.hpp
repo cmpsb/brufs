@@ -22,22 +22,13 @@
 
 #pragma once
 
-#include <cstdint>
+#include "types.hpp"
 
-namespace brufs {
-    class brufs;
-}
+namespace Brufs {
 
-#include "io.hpp"
-#include "structures.hpp"
-#include "status.hpp"
-#include "btree-decl.hpp"
-
-namespace brufs {
-
-class abstio {
+class AbstIO {
 public:
-    virtual ~abstio() = 0;
+    virtual ~AbstIO() = 0;
 
     /**
      * Reads at most `count` bytes from the disk, starting from offset `offset`.
@@ -50,7 +41,7 @@ public:
      * 
      * @return the actual number of bytes read, 0 on EOD, or any status code on error
      */
-    virtual ssize read(void *buf, size count, address offset) const = 0;
+    virtual SSize read(void *buf, Size count, Address offset) const = 0;
 
     /**
      * Writes at most `count` bytes to the disk, starting from offset `offset`.
@@ -63,88 +54,23 @@ public:
      * 
      * @return the actual number of bytes written, or any status code on error
      */
-    virtual ssize write(const void *buf, size count, address offset) = 0;
+    virtual SSize write(const void *buf, Size count, Address offset) = 0;
 
     /**
-     * Returns a string describing the given status code.
+     * Returns a string describing the given Status code.
      * 
-     * @param eno the status code
+     * @param eno the Status code
      * 
      * @return the human-readable string
      */
-    virtual const char *strstatus(ssize eno) const = 0;
+    virtual const char *strstatus(SSize eno) const = 0;
 
     /**
      * Returns the size, in bytes, of the entire disk.
      *
      * @return the size
      */
-    virtual size get_size() const = 0;
-};
-
-struct disk {
-    abstio *io;
-
-    disk(abstio *io) : io(io) {}
-};
-
-template <typename K, typename V>
-class updatable_bmtree : public bmtree::bmtree<K, V> {
-private:
-    address *target;
-public:
-    updatable_bmtree(brufs *fs, address *target, bmtree::allocator alloc = bmtree::ALLOC_NORMAL) : 
-        bmtree::bmtree<K, V>(fs, 0, alloc), target(target)
-    {}
-
-    void set_target(address *target) {
-        this->target = target;
-    }
-
-    void on_root_change(address new_addr) override {
-        *target = new_addr;
-    }
-};
-
-class brufs {
-private:
-    disk *dsk;
-
-    union {
-        char *raw_header;
-        header *hdr;
-    };
-
-    updatable_bmtree<size, extent> fbt;
-    updatable_bmtree<hash, root_header> rht;
-
-    status stt = status::OK;
-
-    extent *get_spare_clusters() { 
-        return reinterpret_cast<extent *>(this->raw_header + this->hdr->header_size);
-    }
-
-    status store_header();
-
-public:
-    brufs(disk *dsk);
-
-    status get_status() const { return this->stt; }
-
-    disk *get_disk() { return this->dsk; }
-
-    status init(header &protoheader);
-
-    status allocate_blocks(size length, extent &target);
-    status free_blocks(const extent &extent);
-
-    status allocate_tree_blocks(size length, extent &target);
-
-    ssize count_roots();
-    int collect_roots(root_header *collection, size count);
-
-    status find_root(const char *name, root_header &target);
-    status add_root(root_header &target);
+    virtual Size get_size() const = 0;
 };
 
 }

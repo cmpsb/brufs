@@ -20,20 +20,42 @@
  * SOFTWARE.
  */
 
-#pragma once
+#include <cstdio>
+#include <cassert>
 
-#include <cstdint>
+#include "version-info.hpp"
+#include "Version.hpp"
 
-namespace Brufs {
+int Brufs::Version::compare(const Version &other) const {
+    if (this->major == 0 && other.minor == 0 && other.major == 0 && other.minor == 0) {
+        return (this->patch == other.patch) ? 0 : -1000;
+    }
 
-using SSize = long long;
-using Offset = unsigned long long;
+    if (other.major == 0 && other.minor == 0) return -1000;
 
-using Address = uint64_t;
-using Size = uint64_t;
-using Hash = uint64_t;
+    if (this->major > other.major) return 100;
+    if (this->major < other.major) return -100;
 
-using InodeId = __uint128_t;
-using OwnerId = __uint128_t;
+    if (this->minor > other.minor) return 10;
+    if (this->minor < other.minor) return -10;
 
+    // Ignore patch differences
+    return 0;
+}
+
+int Brufs::Version::to_string(char *buf, size_t len) const {
+    return snprintf(buf, len, "%hhu.%hhu.%hu", this->major, this->minor, this->patch);
+}
+
+/**
+ * Fills the given version structure with the library's version information.
+ * 
+ * @param version the version struct to fill
+ */
+Brufs::Version Brufs::Version::get() {
+    return {
+        BRUFS_VERSION_MAJOR,
+        BRUFS_VERSION_MINOR,
+        BRUFS_VERSION_PATCH
+    };
 }

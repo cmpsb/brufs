@@ -20,9 +20,13 @@
  * SOFTWARE.
  */
 
-#pragma once
+#include <ctime>
 
-#include "btree-decl.hpp"
-#include "btree-def-alloc.hpp"
-#include "btree-def-container.hpp"
-#include "btree-def-node.hpp"
+#include "Timestamp.hpp"
+
+Brufs::Timestamp Brufs::Timestamp::now() {
+    return {
+        static_cast<uint64_t>(::time(nullptr)),
+        0
+    };
+}

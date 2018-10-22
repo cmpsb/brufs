@@ -29,9 +29,9 @@
 #include <fcntl.h>
 #include <unistd.h>
 
-#include "brufs.hpp"
+#include "libbrufs.hpp"
 
-#include "fd_abst.hpp"
+#include "FdAbst.hpp"
 #include "prompt.hpp"
 
 int add_root(int argc, char **argv) {
@@ -46,23 +46,85 @@ int add_root(int argc, char **argv) {
         return 1;
     }
 
-    fd_abst io(iofd);
-    brufs::disk disk(&io);
-    brufs::brufs fs(&disk);
+    FdAbst io(iofd);
+    Brufs::Disk disk(&io);
+    Brufs::Brufs fs(&disk);
 
-    brufs::status status = fs.get_status();
-    if (status < brufs::status::OK) {
-        fprintf(stderr, "%s\n", brufs::strerror(status));
+    Brufs::Status status = fs.get_status();
+    if (status < Brufs::Status::OK) {
+        fprintf(stderr, "%s\n", Brufs::strerror(status));
         return 1;
     }
 
-    std::string label = prompt_string("Label", "", brufs::MAX_LABEL_LENGTH - 1);
-    brufs::root_header root;
-    strncpy(root.label, label.c_str(), brufs::MAX_LABEL_LENGTH);
+    printf("Cluster size: %u\n", fs.get_header().cluster_size);
 
+    std::string label = prompt_string("Label", "", Brufs::MAX_LABEL_LENGTH - 1);
+
+    Brufs::RootHeader root_header;
+    strncpy(root_header.label, label.c_str(), Brufs::MAX_LABEL_LENGTH);
+    root_header.inode_size = 256;
+    root_header.inode_header_size = sizeof(Brufs::InodeHeader);
+    root_header.max_extent_length = 16 * fs.get_header().cluster_size;
+
+    Brufs::Root root(fs, root_header);
     status = fs.add_root(root);
+    if (status < Brufs::Status::OK) {
+        fprintf(stderr, "Unable to insert the root into the filesystem: %s\n",
+            Brufs::strerror(status)
+        );
 
-    printf("%s\n", brufs::strerror(status));
+        return 1;
+    }
 
-    return status != brufs::status::OK;
+    status = root.init();
+    if (status < Brufs::Status::OK) {
+        fprintf(stderr, "Unable to initialize the root: %s\n",
+            Brufs::strerror(status)
+        );
+
+        return 1;
+    }
+
+    printf("INT at %lX\n", root.get_header().int_address);
+    printf("AIT at %lX\n", root.get_header().ait_address);
+
+    Brufs::Directory root_dir(root);
+
+    auto rdh = root_dir.get_header();
+    rdh->created = Brufs::Timestamp::now();
+    rdh->last_modified = Brufs::Timestamp::now();
+    rdh->num_links = 1;
+    rdh->type = Brufs::InodeType::DIRECTORY;
+    rdh->flags = 0;
+    rdh->num_extents = 0;
+    rdh->file_size = 0;
+    rdh->checksum = 0;
+
+    status = root.insert_inode(Brufs::ROOT_DIR_INODE_ID, root_dir.get_header());
+    if (status < Brufs::Status::OK) {
+        fprintf(stderr, "Unable to insert the root directory into the root: %s\n",
+            Brufs::strerror(status)
+        );
+
+        return 1;
+    }
+
+    printf("Insert root inode with type %d into 0x%lX\n", ((Brufs::InodeHeader &) root_dir).type, root.get_header().int_address);
+
+    status = root_dir.init(Brufs::ROOT_DIR_INODE_ID, rdh);
+    if (status < Brufs::Status::OK) {
+        fprintf(stderr, "Unable to initialize the root directory: %s\n",
+            Brufs::strerror(status)
+        );
+
+        return 1;
+    }
+
+    Brufs::Directory root_dir_check(root);
+    status = root.open_directory(Brufs::ROOT_DIR_INODE_ID, root_dir_check);
+    root_dir_check.count();
+
+    printf("%s\n", Brufs::strerror(status));
+
+    return status != Brufs::Status::OK;
 }

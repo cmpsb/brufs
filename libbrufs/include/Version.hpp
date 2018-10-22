@@ -19,7 +19,39 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
+#pragma once
 
-#include "internal.hpp"
+#include <type_traits>
 
-brufs::abstio::~abstio() {}
+#include <cstdint>
+
+#include "types.hpp"
+
+namespace Brufs {
+
+struct Version {
+    uint8_t major;
+    uint8_t minor;
+    uint16_t patch;
+
+    static Version get();
+
+    int compare(const Version &other) const;
+
+    auto operator<(const Version &other) const { return this->compare(other) < 0; }
+    auto operator>(const Version &other) const { return this->compare(other) > 0; }
+    
+    auto operator==(const Version &other) const { return this->compare(other) == 0; }
+    auto operator!=(const Version &other) const { return this->compare(other) != 0; }
+
+    auto operator<=(const Version &other) const { return *this == other || *this < other; }
+    auto operator>=(const Version &other) const { return *this == other || *this > other; }
+
+    int to_string(char *buf, Size len) const;
+};
+static_assert(
+    std::is_standard_layout<Version>::value, "the version structure must be standard-layout"
+);
+static_assert(sizeof(Version) == 4, "the version structure must be exactly 4 bytes long");
+
+}

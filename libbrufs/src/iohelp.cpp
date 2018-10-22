@@ -20,7 +20,10 @@
  * SOFTWARE.
  */
 
-#include "internal.hpp"
+#include "types.hpp"
+#include "io.hpp"
+#include "Disk.hpp"
+#include "Status.hpp"
 
 /**
  * Reads a number of bytes from a certain offset from disk.
@@ -33,12 +36,12 @@
  * @return either `count`, BRUFS_E_DISK_TRUNCATED if not enough bytes could be read or any error
  *   returned by the disk I/O abstraction layer
  */
-brufs::ssize brufs::dread(disk *dsk, void *buf, size count, address offset) {
+Brufs::SSize Brufs::dread(Disk *dsk, void *buf, Size count, Address offset) {
     char *cbuf = static_cast<char *>(buf);
 
-    size total = 0;
+    Size total = 0;
     while (total < count) {
-        ssize num_read = dsk->io->read(cbuf + total, count - total, offset + total);
+        SSize num_read = dsk->io->read(cbuf + total, count - total, offset + total);
         if (num_read == 0) break;
         if (num_read < 0) return num_read;
 
@@ -46,10 +49,10 @@ brufs::ssize brufs::dread(disk *dsk, void *buf, size count, address offset) {
     }
 
     if (total < count) {
-        return status::E_DISK_TRUNCATED;
+        return Status::E_DISK_TRUNCATED;
     }
 
-    return static_cast<ssize>(total);
+    return static_cast<SSize>(total);
 }
 
 /**
@@ -63,12 +66,12 @@ brufs::ssize brufs::dread(disk *dsk, void *buf, size count, address offset) {
  * @return either `count`, BRUFS_E_DISK_TRUNCATED if not enough bytes could be written or any error
  *   returned by the disk I/O abstraction layer
  */
-brufs::ssize brufs::dwrite(disk *dsk, const void *buf, size count, address offset) {
+Brufs::SSize Brufs::dwrite(Disk *dsk, const void *buf, Size count, Address offset) {
     const char *cbuf = static_cast<const char *>(buf);
 
-    size total = 0;
+    Size total = 0;
     while (total < count) {
-        ssize num_written = dsk->io->write(cbuf + total, count - total, offset + total);
+        SSize num_written = dsk->io->write(cbuf + total, count - total, offset + total);
         if (num_written == 0) break;
         if (num_written < 0) return num_written;
 
@@ -76,8 +79,8 @@ brufs::ssize brufs::dwrite(disk *dsk, const void *buf, size count, address offse
     }
 
     if (total < count) {
-        return status::E_DISK_TRUNCATED;
+        return Status::E_DISK_TRUNCATED;
     }
 
-    return static_cast<ssize>(total);
+    return static_cast<SSize>(total);
 }

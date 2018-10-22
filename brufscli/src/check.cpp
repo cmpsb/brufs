@@ -29,9 +29,10 @@
 #include <fcntl.h>
 #include <unistd.h>
 
-#include "brufs.hpp"
+#include "libbrufs.hpp"
 
-#include "fd_abst.hpp"
+#include "FdAbst.hpp"
+#include "Util.hpp"
 
 int check(int argc, char **argv) {
     if (argc < 2) {
@@ -45,27 +46,60 @@ int check(int argc, char **argv) {
         return 1;
     }
 
-    fd_abst io(iofd);
-    brufs::disk disk(&io);
-    brufs::brufs fs(&disk);
+    FdAbst io(iofd);
+    Brufs::Disk disk(&io);
+    Brufs::Brufs fs(&disk);
 
-    brufs::status status = fs.get_status();
-    fprintf(stderr, "%s\n", brufs::strerror(status));
-    if (status < brufs::status::OK) return 1;
+    Brufs::Status status = fs.get_status();
+    fprintf(stderr, "%s\n", Brufs::strerror(status));
+    if (status < Brufs::Status::OK) return 1;
 
-    brufs::ssize root_count = fs.count_roots();
+    auto capacity = fs.get_header().num_blocks;
+    Brufs::Size reserved, available, extents, in_fbt;
+    status = fs.count_free_blocks(reserved, available, extents, in_fbt);
+    if (status < Brufs::Status::OK) return 1;
+
+    int available_pct = (available * 100) / capacity;
+    int reserved_pct = (reserved * 100) / capacity;
+
+    auto cap_str = Util::pretty_print_bytes(capacity);
+    auto avail_str = Util::pretty_print_bytes(available);
+    auto res_str = Util::pretty_print_bytes(reserved);
+
+    printf(
+        "Capacity: %s (%lu); "
+        "available: %s (%lu) in %lu extents (%d%%); "
+        "reserved: %s (%lu, %d%%)\n", 
+        cap_str.c_str(), capacity,
+        avail_str.c_str(), available, extents, available_pct, 
+        res_str.c_str(), reserved, reserved_pct
+    );
+
+    int in_fbt_pct = (in_fbt * 100) / capacity;
+    auto in_fbt_str = Util::pretty_print_bytes(in_fbt);
+
+    printf("fbt at: 0x%lX, %s (%d%%)\n", 
+        fs.get_header().fbt_address, in_fbt_str.c_str(), in_fbt_pct
+    );
+
+    Brufs::SSize root_count = fs.count_roots();
     printf("%lld roots\n", root_count);
 
-    brufs::root_header *roots = new brufs::root_header[root_count];
-    status = static_cast<brufs::status>(fs.collect_roots(roots, root_count));
+    auto roots = new Brufs::RootHeader[root_count];
+    status = static_cast<Brufs::Status>(fs.collect_roots(roots, root_count));
     if (status < 0) {
-        fprintf(stderr, "Can't read roots: %s\n", brufs::strerror(status));
+        fprintf(stderr, "Can't read roots: %s\n", Brufs::strerror(status));
         return 1;
     }
 
-    for (brufs::ssize i = 0; i < root_count; ++i) {
-        printf("Root %s\n", roots[i].label);
+    for (Brufs::SSize i = 0; i < root_count; ++i) {
+        Brufs::Root root(fs, roots[i]);
+        printf("Root \"%s\"\n", roots[i].label);
+        printf("  int at 0x%lX\n", root.get_header().int_address);
+        printf("  ait at 0x%lX\n", root.get_header().ait_address);
     }
 
-    return status != brufs::status::OK;
+    delete[] roots;
+
+    return status < Brufs::Status::OK;
 }

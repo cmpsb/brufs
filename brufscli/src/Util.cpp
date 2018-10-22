@@ -20,42 +20,34 @@
  * SOFTWARE.
  */
 
-#include <cstdio>
-#include <cassert>
+#include <cmath>
+#include <cstring>
 
-#include "internal.hpp"
-#include "version.hpp"
+#include "libbrufs.hpp"
+#include "Util.hpp"
 
-int brufs::version::compare(const version &other) const {
-    if (this->major == 0 && other.minor == 0 && other.major == 0 && other.minor == 0) {
-        return (this->patch == other.patch) ? 0 : -1000;
-    }
+static constexpr unsigned int PPB_BUF_SIZE = 64;
 
-    if (other.major == 0 && other.minor == 0) return -1000;
+static const char *suffixes[] = {
+        "B",
+        "kB",
+        "MB",
+        "GB",
+        "TB",
+        "PB",
+        "EB",
+        "ZB",
+        "YB"
+};
 
-    if (this->major > other.major) return 100;
-    if (this->major < other.major) return -100;
+Brufs::String Util::pretty_print_bytes(Brufs::Size bytes) {
+    const double doubleBytes = bytes;
+    const int magnitude = (int) (std::log(doubleBytes) / std::log(1024));
 
-    if (this->minor > other.minor) return 10;
-    if (this->minor < other.minor) return -10;
+    char buf[PPB_BUF_SIZE];
+    snprintf(buf, PPB_BUF_SIZE, "%3.1f %s", 
+        doubleBytes / std::pow(1024, magnitude), suffixes[magnitude]
+    );
 
-    // Ignore patch differences
-    return 0;
-}
-
-int brufs::version::to_string(char *buf, size_t len) const {
-    return snprintf(buf, len, "%hhu.%hhu.%hu", this->major, this->minor, this->patch);
-}
-
-/**
- * Fills the given version structure with the library's version information.
- * 
- * @param version the version struct to fill
- */
-brufs::version brufs::version::get() {
-    return {
-        BRUFS_VERSION_MAJOR,
-        BRUFS_VERSION_MINOR,
-        BRUFS_VERSION_PATCH
-    };
+    return Brufs::String(buf);
 }

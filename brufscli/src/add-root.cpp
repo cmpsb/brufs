@@ -56,13 +56,11 @@ int add_root(int argc, char **argv) {
         return 1;
     }
 
-    printf("Cluster size: %u\n", fs.get_header().cluster_size);
-
     std::string label = prompt_string("Label", "", Brufs::MAX_LABEL_LENGTH - 1);
 
     Brufs::RootHeader root_header;
     strncpy(root_header.label, label.c_str(), Brufs::MAX_LABEL_LENGTH);
-    root_header.inode_size = 256;
+    root_header.inode_size = 128;
     root_header.inode_header_size = sizeof(Brufs::InodeHeader);
     root_header.max_extent_length = 16 * fs.get_header().cluster_size;
 
@@ -85,9 +83,6 @@ int add_root(int argc, char **argv) {
         return 1;
     }
 
-    printf("INT at %lX\n", root.get_header().int_address);
-    printf("AIT at %lX\n", root.get_header().ait_address);
-
     Brufs::Directory root_dir(root);
 
     auto rdh = root_dir.get_header();
@@ -108,8 +103,6 @@ int add_root(int argc, char **argv) {
 
         return 1;
     }
-
-    printf("Insert root inode with type %d into 0x%lX\n", ((Brufs::InodeHeader &) root_dir).type, root.get_header().int_address);
 
     status = root_dir.init(Brufs::ROOT_DIR_INODE_ID, rdh);
     if (status < Brufs::Status::OK) {

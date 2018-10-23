@@ -31,6 +31,7 @@
 
 #include "libbrufs.hpp"
 
+#include "Util.hpp"
 #include "FdAbst.hpp"
 
 int ls(int argc, char **argv) {
@@ -73,9 +74,6 @@ int ls(int argc, char **argv) {
     }
 
     Brufs::Root root(fs, root_header);
-
-    auto hdr = root.create_inode_header();
-    status = root.find_inode(Brufs::ROOT_DIR_INODE_ID, hdr);
 
     Brufs::Directory dir(root);
     status = root.open_directory(Brufs::ROOT_DIR_INODE_ID, dir);
@@ -134,12 +132,29 @@ int ls(int argc, char **argv) {
         return 1;
     }
 
+    auto hdr = root.create_inode_header();
+
     for (const auto &entry : entries) {
         char label[Brufs::MAX_LABEL_LENGTH + 1];
         memcpy(label, entry.label, Brufs::MAX_LABEL_LENGTH);
         label[Brufs::MAX_LABEL_LENGTH] = 0;
 
-        printf("%s\n", label);
+        Brufs::String inode_str = Util::pretty_print_inode_id(entry.inode_id);
+
+        status = root.find_inode(entry.inode_id, hdr);
+        if (status < Brufs::Status::OK) {
+            fprintf(stderr, "Unable to load inode %s: %s", inode_str.c_str(), io.strstatus(status));
+            continue;
+        }
+
+        Brufs::String mtime_str = Util::pretty_print_timestamp(hdr->last_modified);
+
+        Brufs::String mode_str = Util::pretty_print_mode(
+            hdr->type == Brufs::InodeType::DIRECTORY,
+            hdr->mode
+        );
+
+        printf("%s %s %s\n", mode_str.c_str(), mtime_str.c_str(), label);
     }
 
     return 0;

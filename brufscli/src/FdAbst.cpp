@@ -34,7 +34,6 @@ FdAbst::FdAbst(int file) : file(file) {
 }
 
 Brufs::SSize FdAbst::read(void *buf, Brufs::Size count, Brufs::Address offset) const {
-    printf("rd %lu @ 0x%lX\n", count, offset);
     ssize_t status = pread(this->file, buf, count, offset);
     if (status == -1) return Brufs::Status::E_ABSTIO_BASE + errno;
 
@@ -42,8 +41,6 @@ Brufs::SSize FdAbst::read(void *buf, Brufs::Size count, Brufs::Address offset) c
 }
 
 Brufs::SSize FdAbst::write(const void *buf, Brufs::Size count, Brufs::Address offset) {
-    printf("wt %lu @ 0x%lX\n", count, offset);
-
     ssize_t status = pwrite(this->file, buf, count, offset);
     if (status == -1) return Brufs::Status::E_ABSTIO_BASE + errno;
 

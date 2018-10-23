@@ -29,8 +29,6 @@ Brufs::Status Brufs::Directory::init(const InodeId &id, const InodeHeader *hdr) 
     auto status = entries.init();
     if (status < Status::OK) return status;
 
-    printf("det %lX\n", this->det_address());
-
     return this->store();
 }
 

@@ -50,7 +50,7 @@ int init(int argc, char **argv) {
     Brufs::Brufs fs(&disk);
 
     Brufs::Header proto;
-    proto.cluster_size_exp = 12;
+    proto.cluster_size_exp = 14;
     proto.sc_low_mark = 12;
     proto.sc_high_mark = 24;
 

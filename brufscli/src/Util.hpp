@@ -27,4 +27,10 @@
 class Util {
 public:
     static Brufs::String pretty_print_bytes(Brufs::Size bytes);
+
+    static Brufs::String pretty_print_inode_id(Brufs::InodeId inode_id);
+
+    static Brufs::String pretty_print_mode(bool is_dir, uint16_t mode);
+
+    static Brufs::String pretty_print_timestamp(const Brufs::Timestamp &ts);
 };

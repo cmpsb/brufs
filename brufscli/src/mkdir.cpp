@@ -120,17 +120,23 @@ int mkdir(int argc, char **argv) {
         dir = subdir;
     }
 
+    mode_t mode_mask = umask(0);
+    umask(mode_mask);
+
     Brufs::Directory new_dir(root);
 
     auto rdh = new_dir.get_header();
     rdh->created = Brufs::Timestamp::now();
     rdh->last_modified = Brufs::Timestamp::now();
+    rdh->owner = geteuid();
+    rdh->group = getegid();
     rdh->num_links = 1;
     rdh->type = Brufs::InodeType::DIRECTORY;
     rdh->flags = 0;
     rdh->num_extents = 0;
     rdh->file_size = 0;
     rdh->checksum = 0;
+    rdh->mode = 0777 & ~mode_mask;
 
     std::random_device rd;
     std::mt19937 mt(rd());

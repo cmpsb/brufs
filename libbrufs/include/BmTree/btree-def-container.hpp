@@ -182,7 +182,6 @@ Status BmTree<K, V>::count_values(Size &count) {
         count += leaf.hdr->num_values;
 
         assert(leaf_addr != leaf.prev());
-        printf("%lX <- %lX\n", leaf.prev(), leaf_addr);
         leaf_addr = leaf.prev();
     }
 

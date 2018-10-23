@@ -456,7 +456,7 @@ struct Node {
     Status insert_initial(const K &key, Address left, Address right);
 
     template <typename R>
-    Status split(const K &key, const R *value);
+    Status split(const K &key, const R *value, unsigned int idx);
 
     /**
      * Inserts a value in this node, without walking the rest of the tree.
@@ -469,6 +469,9 @@ struct Node {
      */
     template <typename R>
     Status insert_direct(const K &key, const R *value, bool collide = false);
+
+    template <typename R>
+    Status insert_direct_at(const K &key, const R *value, unsigned int idx, bool collide = false);
 
     /**
      * Inserts a value in this part of the (sub-)tree.

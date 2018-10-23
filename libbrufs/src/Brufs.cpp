@@ -98,8 +98,6 @@ Brufs::Status Brufs::Brufs::store_header() {
  */
 
 Brufs::Status Brufs::Brufs::init(Header &protoheader) {
-    printf("Header size: %lu\n", sizeof(Header));
-
     free(this->raw_header);
     this->raw_header = static_cast<char *>(malloc(1 << protoheader.cluster_size_exp));
     assert(this->raw_header);
@@ -172,7 +170,6 @@ Brufs::Status Brufs::Brufs::allocate_blocks(Size length, Extent &target) {
     if (status < 0) return status;
 
     target = {result.offset, length};
-    printf("Alloc 0x%lX\n", target.offset);
 
     if (result.length > length) {
         Extent residual {result.offset + length, result.length - length};
@@ -216,8 +213,6 @@ Brufs::Status Brufs::Brufs::allocate_tree_blocks(UNUSED Size length, Extent &tar
     auto list = this->get_spare_clusters();
     target = list[this->hdr->sc_count];
 
-    printf("TAlloc 0x%lX\n", target.offset);
-
     return this->store_header();
 }
 
@@ -227,8 +222,6 @@ Brufs::Status Brufs::Brufs::free_blocks(const Extent &ext) {
     if (this->hdr->sc_count < this->hdr->sc_high_mark && ext.length >= fbt_block_size) {
         auto list = this->get_spare_clusters();
 
-        printf("TFree 0x%lX\n", ext.offset);
-
         list[this->hdr->sc_count++] = {ext.offset, fbt_block_size};
 
         auto status = this->store_header();
@@ -236,15 +229,12 @@ Brufs::Status Brufs::Brufs::free_blocks(const Extent &ext) {
 
         Extent residual {ext.offset + fbt_block_size, ext.length - fbt_block_size};
         if (ext.length > fbt_block_size) {
-            printf("RFree 0x%lX\n", residual.offset);
             auto status = this->fbt.insert(residual.length, residual);
             if (status < Status::OK) return status;
         }
 
         return Status::OK;
     }
-
-    printf("Free 0x%lX\n", ext.offset);
 
     return this->fbt.insert(ext.length, ext);
 }

@@ -348,7 +348,7 @@ Status Node<K, V>::insert_initial(const K &key, Address left, Address right) {
 
 template <typename K, typename V>
 template <typename R>
-Status Node<K, V>::split(const K &key, const R *value) {
+Status Node<K, V>::split(const K &key, const R *value, const unsigned int idx) {
     Status status;
 
     auto keys = this->get_keys();
@@ -362,8 +362,6 @@ Status Node<K, V>::split(const K &key, const R *value) {
     Extent sibling_extent;
     status = this->container->alloc(this->length, sibling_extent);
     if (status < 0) return status;
-
-    printf("0x%lX splits into 0x%lX and 0x%lX\n", this->addr, sibling_extent.offset, this->addr);
 
     Node<K, V> sibling(
         this->fs, sibling_extent.offset, this->length, this->container, this
@@ -397,44 +395,21 @@ Status Node<K, V>::split(const K &key, const R *value) {
     }
 
     if (this->parent != nullptr) {
-        status = this->parent->insert_direct<Address>(
-            sibling_keys[num_left - 1], &sibling_extent.offset
+        status = this->parent->insert_direct_at<Address>(
+            sibling_keys[num_left - 1], &sibling_extent.offset, this->index_in_parent
         );
         if (status < 0) {
             this->container->free(sibling_extent);
             return status;
         }
 
-        // if (this->parent->hdr->num_values >= this->parent->get_cap()) {
-        //     status = this->parent->split<Address>(sibling_keys[num_left - 1], sibling_extent.offset);
-        // } else {
-        //     auto keys = this->parent->get_keys();
-        //     auto idx = this->index_in_parent;
-        //     memmove(keys + idx + 1, keys + idx, (this->parent->hdr->num_values - idx) * sizeof(K));
-        //     keys[idx] = sibling_keys[num_left - 1];
+        ++this->index_in_parent;
 
-        //     auto values = this->parent->get_values<Address>();
-        //     memmove(
-        //         values + idx + 1, values + idx, 
-        //         (this->parent->hdr->num_values - idx) * sizeof(Address)
-        //     );
-        //     values[idx] = sibling_extent.offset;
-
-        //     ++this->parent->hdr->num_values;
-        //     ++this->index_in_parent;
-
-        //     status = this->parent->store();
-        //     if (status < Status::OK) {
-        //         this->container->free(sibling_extent);
-        //         return status;
-        //     }
-        // }
-
-        if (key <= sibling_keys[num_left - 1]) {
-            return sibling.insert_direct(key, value);
+        if (idx <= num_left) {
+            return sibling.insert_direct_at<R>(key, value, idx);
         }
 
-        return this->insert_direct(key, value);
+        return this->insert_direct_at<R>(key, value, idx - num_left);
     } else {
         Extent parent_extent;
         status = this->container->alloc(this->length, parent_extent);
@@ -458,10 +433,10 @@ Status Node<K, V>::split(const K &key, const R *value) {
         );
         if (status < 0) return status;
 
-        if (key <= sibling_keys[num_left - 1]) {
-            status = sibling.insert_direct(key, value);
+        if (idx <= num_left) {
+            status = sibling.insert_direct_at<R>(key, value, idx);
         } else {
-            status = this->insert_direct(key, value);
+            status = this->insert_direct_at<R>(key, value, idx - num_left);
         }
         if (status < 0) return status;
 
@@ -472,13 +447,18 @@ Status Node<K, V>::split(const K &key, const R *value) {
 template<typename K, typename V>
 template <typename R>
 Status Node<K, V>::insert_direct(const K &key, const R *value, bool collide) {
-    auto key_cap = this->get_cap();
-
-    if (this->hdr->num_values >= key_cap) return this->split<R>(key, value);
-
     unsigned int idx;
     if (this->hdr->level > 0) this->locate(key, idx);
     else this->locate_in_leaf(key, idx);
+
+    return this->insert_direct_at(key, value, idx, collide);
+}
+
+template <typename K, typename V>
+template <typename R>
+Status Node<K, V>::insert_direct_at(const K &key, const R *value, unsigned int idx, bool collide) {
+    auto key_cap = this->get_cap();
+    if (this->hdr->num_values >= key_cap) return this->split<R>(key, value, idx);
 
     auto keys = this->get_keys();
 
@@ -601,8 +581,6 @@ Status Node<K, V>::update(const K &key, const V *value) {
 template <typename K, typename V>
 template <typename R>
 Status Node<K, V>::adopt(Node<K, V> *adoptee) {
-    printf("0x%lX adopts 0x%lX\n", this->addr, adoptee->addr);
-
     auto value_cap = this->get_cap();
     auto num_left = adoptee->hdr->num_values;
     auto num_right = this->hdr->num_values;
@@ -744,7 +722,6 @@ Status Node<K, V>::remove_direct(unsigned int idx) {
         if (status < 0) return status;
 
         // Try full adoption first
-        printf("This adopts left\n");
         status = this->adopt<R>(&left_sibling);
         if (status != Status::E_CANT_ADOPT) return status;
 
@@ -764,7 +741,6 @@ Status Node<K, V>::remove_direct(unsigned int idx) {
         if (status < 0) return status;
 
         // Try full adoption first
-        printf("Right %u 0x%lX adopts this %u 0x%lX\n", this->index_in_parent + 1, this->parent->get_values<Address>()[this->index_in_parent + 1], this->index_in_parent, this->parent->get_values<Address>()[this->index_in_parent]);
         status = right_sibling.adopt<R>(this);
         if (status != Status::E_CANT_ADOPT) return status;
 

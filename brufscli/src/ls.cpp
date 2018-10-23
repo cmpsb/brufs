@@ -149,12 +149,10 @@ int ls(int argc, char **argv) {
 
         Brufs::String mtime_str = Util::pretty_print_timestamp(hdr->last_modified);
 
-        Brufs::String mode_str = Util::pretty_print_mode(
-            hdr->type == Brufs::InodeType::DIRECTORY,
-            hdr->mode
-        );
+        auto is_dir = hdr->type == Brufs::InodeType::DIRECTORY;
+        auto mode_str = Util::pretty_print_mode(is_dir, hdr->mode);
 
-        printf("%s %s %s\n", mode_str.c_str(), mtime_str.c_str(), label);
+        printf("%s %s %s%s\n", mode_str.c_str(), mtime_str.c_str(), label, is_dir ? "/" : "");
     }
 
     return 0;

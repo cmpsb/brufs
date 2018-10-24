@@ -24,6 +24,10 @@
 #include "File.hpp"
 #include "Vector.hpp"
 
+Brufs::Status Brufs::File::destroy() {
+    return this->truncate(0);
+}
+
 Brufs::Size Brufs::Inode::get_data_size() const {
     const auto root_header = this->root.get_header();
 

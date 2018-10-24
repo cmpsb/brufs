@@ -23,6 +23,8 @@
 #include <cmath>
 #include <cstring>
 
+#include <random>
+
 #include "libbrufs.hpp"
 #include "Util.hpp"
 
@@ -110,4 +112,15 @@ Brufs::String Util::pretty_print_timestamp(const Brufs::Timestamp &ts) {
     strftime(buf, PPT_BUF_SIZE, "%F %T", &tm);
 
     return {buf};
+}
+
+Brufs::InodeId Util::generate_inode_id() {
+    std::random_device rd;
+    std::mt19937 mt(rd());
+    std::uniform_int_distribution<uint64_t> dist;
+
+    const Brufs::InodeId inode_id_low = dist(mt);
+    const Brufs::InodeId inode_id_high = dist(mt);
+
+    return inode_id_high << 64 | inode_id_low;
 }

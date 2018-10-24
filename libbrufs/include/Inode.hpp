@@ -49,7 +49,7 @@ public:
 
     Inode &operator=(const Inode &other);
 
-    void init(const InodeId id, const InodeHeader *header);
+    Status init(const InodeId id, const InodeHeader *header);
     Status store();
     Status destroy() { return Status::OK; }
 

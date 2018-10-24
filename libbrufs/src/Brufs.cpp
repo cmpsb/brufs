@@ -245,6 +245,8 @@ Brufs::Status Brufs::Brufs::count_free_blocks(
     standby = this->hdr->sc_count * this->hdr->cluster_size;
 
     available = 0;
+    in_fbt = 0;
+    extents = 0;
 
     auto status = this->fbt.count_used_space(in_fbt);
     if (status < Status::OK) return status;

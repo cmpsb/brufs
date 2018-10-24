@@ -33,4 +33,6 @@ public:
     static Brufs::String pretty_print_mode(bool is_dir, uint16_t mode);
 
     static Brufs::String pretty_print_timestamp(const Brufs::Timestamp &ts);
+
+    static Brufs::InodeId generate_inode_id();
 };

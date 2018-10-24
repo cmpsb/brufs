@@ -29,6 +29,7 @@ int help(int, char **);
 int add_root(int, char **);
 int ls(int, char **);
 int mkdir(int, char **);
+int touch(int, char **);
 
 static void print_usage(const char *pname) {
     fprintf(stderr, 
@@ -61,6 +62,10 @@ int main(int argc, char **argv) {
         return ls(argc - 1, argv + 1);
     } else if (action == "mkdir") {
         return mkdir(argc - 1, argv + 1);
+    } else if (action == "touch") {
+        return touch(argc - 1, argv + 1);
+    } else if (action == "copy-in") {
+        return copy_in(argc - 1, argv + 1);
     // } else if (action == "help") {
     //     return help(argc - 1, argv + 1);
     }

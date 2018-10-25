@@ -22,8 +22,10 @@
 
 #pragma once
 
-#include "Brufs.hpp"
-#include "Directory.hpp"
-#include "File.hpp"
-#include "String.hpp"
-#include "Seed.hpp"
+#include "types.hpp"
+
+namespace Brufs {
+
+static constexpr Hash HASH_SEED = 14616742;
+
+}

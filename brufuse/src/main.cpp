@@ -20,19 +20,30 @@
  * SOFTWARE.
  */
 
+#include <unistd.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+
 #include <string>
 #include <vector>
 
 #include "slopt/opt.h"
+#include "xxhash/xxhash.h"
+#include "libbrufs.hpp"
 
 static slopt_Option options[] = {
     {'s', "socket", SLOPT_REQUIRE_ARGUMENT},
+    {'v', "visibility", SLOPT_REQUIRE_ARGUMENT},
+    {'m', "mode", SLOPT_REQUIRE_ARGUMENT},
     {'o', "option", SLOPT_REQUIRE_ARGUMENT},
     {'d', "daemon", SLOPT_ALLOW_ARGUMENT},
     {0, nullptr, SLOPT_DISALLOW_ARGUMENT}
 };
 
 static std::string socket_path;
+static std::string socket_visibility;
+static unsigned int socket_mode;
+static bool socket_mode_override = false;
 static std::string dev_path;
 static std::string mount_point;
 static std::vector<const char *> fuse_args;
@@ -48,6 +59,20 @@ static void apply_option(int sw, char snam, const char *lnam, const char *val, v
         switch (snam) {
         case 's':
             socket_path = val;
+            return;
+        case 'v':
+            socket_visibility = val;
+            if (socket_visibility != "public" && socket_visibility != "private") {
+                fprintf(stderr, "Unknown visibility mode %s\n", val);
+                exit(1);
+            }
+            return;
+        case 'm':
+            if (sscanf(val, "%o", &socket_mode) != 1) {
+                fprintf(stderr, "Unable to parse socket mode %s into octal\n", val);
+                exit(1);
+            }
+            socket_mode_override = true;
             return;
         case 'o':
             fuse_args.push_back(val);
@@ -96,7 +121,62 @@ static void apply_option(int sw, char snam, const char *lnam, const char *val, v
     }
 }
 
+static void set_socket_visibility() {
+    if (socket_visibility.empty()) {
+        socket_visibility = geteuid() == 0 ? "public" : "private";
+    }
+}
+
+static void set_socket_mode() {
+    if (socket_mode_override) return;
+
+    if (socket_visibility == "public") socket_mode = 0666;
+    else socket_mode = 0600;
+}
+
+static std::string hash_dev_path() {
+    const auto hash = XXH64(dev_path.c_str(), dev_path.length(), Brufs::HASH_SEED);
+
+    constexpr unsigned int BUF_SIZE = 128;
+    char buf[BUF_SIZE];
+    snprintf(buf, BUF_SIZE, "%hX-%hX-%hX-%hX", 
+        (uint16_t) (hash >> 48),
+        (uint16_t) (hash >> 32),
+        (uint16_t) (hash >> 16),
+        (uint16_t) (hash >>  0)
+    );
+
+    return {buf};
+}
+
+static std::string build_socket_path() {
+
+    if (socket_visibility == "public") {
+        mkdir("/run/brufuse", socket_mode);
+        return "/run/brufuse/" + hash_dev_path() + ".sock";
+    } else {
+        std::string run_dir;
+
+        const char *run_dir_raw = getenv("XDG_RUNTIME_DIR");
+        if (!run_dir_raw) {
+            std::string in_tmp_dir = "/tmp/" + std::to_string(geteuid());
+            mkdir(in_tmp_dir.c_str(), socket_mode);
+            run_dir = in_tmp_dir + "/brufuse";
+        } else {
+            run_dir = std::string(run_dir_raw) + "/brufuse";
+        }
+
+        mkdir(run_dir.c_str(), socket_mode);
+        return run_dir + "/" + hash_dev_path() + ".sock";
+    }
+}
+
 int main(int argc, char **argv) {
-    int nargs = slopt_parse(argc - 1, argv + 1, options, apply_option, nullptr);
-    (void) nargs;
+    slopt_parse(argc - 1, argv + 1, options, apply_option, nullptr);
+
+    set_socket_visibility();
+    set_socket_mode();
+    
+    if (socket_path.empty()) socket_path = build_socket_path();
+    printf("Socket will be %s at %s\n", socket_visibility.c_str(), socket_path.c_str());
 }

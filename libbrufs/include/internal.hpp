@@ -23,6 +23,7 @@
 #pragma once
 
 #include "types.hpp"
+#include "Seed.hpp"
 
 #define UNUSED __attribute__((unused))
 
@@ -33,8 +34,7 @@ static inline N updiv(N divident, N divisor) {
 
 namespace Brufs {
 
-static const Hash CHECKSUM_SEED = 14616742;
-static const Hash HASH_SEED = CHECKSUM_SEED;
+static const Hash CHECKSUM_SEED = HASH_SEED;
 
 static const Size BLOCK_SIZE = 512;
 

@@ -31,12 +31,15 @@
 #include "xxhash/xxhash.h"
 #include "libbrufs.hpp"
 
+#include "service.hpp"
+#include "mount-request.hpp"
+
 static slopt_Option options[] = {
     {'s', "socket", SLOPT_REQUIRE_ARGUMENT},
     {'v', "visibility", SLOPT_REQUIRE_ARGUMENT},
     {'m', "mode", SLOPT_REQUIRE_ARGUMENT},
     {'o', "option", SLOPT_REQUIRE_ARGUMENT},
-    {'d', "daemon", SLOPT_ALLOW_ARGUMENT},
+    {'d', "daemon", SLOPT_DISALLOW_ARGUMENT},
     {0, nullptr, SLOPT_DISALLOW_ARGUMENT}
 };
 
@@ -45,9 +48,10 @@ static std::string socket_visibility;
 static unsigned int socket_mode;
 static bool socket_mode_override = false;
 static std::string dev_path;
+static std::string root_name;
 static std::string mount_point;
-static std::vector<const char *> fuse_args;
-static bool daemonize = true;
+static std::vector<std::string> fuse_args;
+static bool is_daemon = false;
 
 static void apply_option(int sw, char snam, const char *lnam, const char *val, void *pl) {
     (void) pl;
@@ -78,7 +82,7 @@ static void apply_option(int sw, char snam, const char *lnam, const char *val, v
             fuse_args.push_back(val);
             return;
         case 'd':
-            if (sval == "n" || sval == "no" || sval == "0" || sval == "false") daemonize = false;
+            is_daemon = true;
             return;
         }
     }
@@ -88,14 +92,20 @@ static void apply_option(int sw, char snam, const char *lnam, const char *val, v
         return;
     }
 
+    if (sw == SLOPT_DIRECT && root_name.empty()) {
+        root_name = val;
+        return;
+    }
+
     if (sw == SLOPT_DIRECT && mount_point.empty()) {
         mount_point = val;
         return;
     }
 
     if (sw == SLOPT_DIRECT) {
-        fprintf(stderr, "Don't know what to do with %s (device is %s, mount point is %s)\n",
-            val, dev_path.c_str(), mount_point.c_str()
+        fprintf(stderr, 
+            "Don't know what to do with %s (device is %s, root is %s, mount point is %s)\n",
+            val, dev_path.c_str(), root_name.c_str(), mount_point.c_str()
         );
         exit(1);
     }
@@ -150,7 +160,6 @@ static std::string hash_dev_path() {
 }
 
 static std::string build_socket_path() {
-
     if (socket_visibility == "public") {
         mkdir("/run/brufuse", socket_mode);
         return "/run/brufuse/" + hash_dev_path() + ".sock";
@@ -171,12 +180,22 @@ static std::string build_socket_path() {
     }
 }
 
+void set_socket_path() {
+    if (!socket_path.empty()) return;
+
+    socket_path = build_socket_path();
+}
+
 int main(int argc, char **argv) {
     slopt_parse(argc - 1, argv + 1, options, apply_option, nullptr);
 
     set_socket_visibility();
     set_socket_mode();
-    
-    if (socket_path.empty()) socket_path = build_socket_path();
-    printf("Socket will be %s at %s\n", socket_visibility.c_str(), socket_path.c_str());
+    set_socket_path();
+
+    if (is_daemon) {
+        return launch_service(socket_path, socket_mode, dev_path);
+    } else {
+        return request_mount(socket_path, root_name, mount_point, fuse_args);
+    }
 }

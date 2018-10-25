@@ -9,6 +9,8 @@ set(SOURCE_FILES
     src/mkdir.cpp
     src/Util.cpp
     src/touch.cpp
+    src/copy_in.cpp
+    src/copy_out.cpp
 )
 
 include_directories(${CMAKE_SOURCE_DIR}/libbrufs/include src)

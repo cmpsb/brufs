@@ -30,6 +30,8 @@ int add_root(int, char **);
 int ls(int, char **);
 int mkdir(int, char **);
 int touch(int, char **);
+int copy_in(int, char **);
+int copy_out(int, char **);
 
 static void print_usage(const char *pname) {
     fprintf(stderr, 
@@ -66,6 +68,8 @@ int main(int argc, char **argv) {
         return touch(argc - 1, argv + 1);
     } else if (action == "copy-in") {
         return copy_in(argc - 1, argv + 1);
+    } else if (action == "copy-out" || action == "cat") {
+        return copy_out(argc - 1, argv + 1);
     // } else if (action == "help") {
     //     return help(argc - 1, argv + 1);
     }

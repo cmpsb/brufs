@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2018 Luc Everse <luc@cmpsb.net>
+ * Copyright (c) 2017-2018 Luc Everse <luc@wukl.net>
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -16,13 +16,12 @@
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
  * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * OUT OF OR IN CONNECTION WITH THE OSFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
 
 #include <cstdio>
-
-#include <string>
+#include <cerrno>
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -31,28 +30,35 @@
 
 #include "libbrufs.hpp"
 
-#include "Util.hpp"
 #include "FdAbst.hpp"
 
-int ls(int argc, char **argv) {
-    if (argc < 3) {
-        fprintf(stderr, "Specify a file and a path.\n");
+static constexpr unsigned int TRANSFER_BUFFER_SIZE = 128 * 1024 * 1024;
+
+int copy_in(int argc, char **argv) {
+    if (argc < 4) {
+        fprintf(stderr, "Specify a file, a path, and a file to copy to that location.\n");
         return 3;
+    }
+
+    FILE *in_file = fopen(argv[3], "rb");
+    if (!in_file) {
+        fprintf(stderr, "Unable to open %s: %s\n", argv[3], strerror(errno));
+        return 1;
     }
 
     int iofd = open(argv[1], O_RDWR);
     if (iofd == -1) {
-        fprintf(stderr, "Unable to open %s: %s", argv[1], strerror(errno));
+        fprintf(stderr, "Unable to open %s: %s\n", argv[1], strerror(errno));
         return 1;
     }
 
-    FdAbst io(iofd);
+    FdAbst io{iofd};
     Brufs::Disk disk(&io);
     Brufs::Brufs fs(&disk);
 
     Brufs::Status status = fs.get_status();
     if (status < Brufs::Status::OK) {
-        fprintf(stderr, "%s\n", Brufs::strerror(status));
+        fprintf(stderr, "%s\n", io.strstatus(status));
         return 1;
     }
 
@@ -68,7 +74,7 @@ int ls(int argc, char **argv) {
     status = fs.find_root(root_name.c_str(), root_header);
     if (status < Brufs::Status::OK) {
         fprintf(stderr, "Unable to find root %s: %s\n", 
-            root_name.c_str(), Brufs::strerror(status)
+            root_name.c_str(), io.strstatus(status)
         );
         return 1;
     }
@@ -79,10 +85,8 @@ int ls(int argc, char **argv) {
     status = root.open_directory(Brufs::ROOT_DIR_INODE_ID, dir);
     if (status < Brufs::Status::OK) {
         fprintf(stderr, "Unable to open root directory %s: %s\n",
-            root_name.c_str(), Brufs::strerror(status)
+            root_name.c_str(), io.strstatus(status)
         );
-
-        return 1;
     }
 
     Brufs::String local_path = path.substr(
@@ -94,7 +98,7 @@ int ls(int argc, char **argv) {
 
     if (local_path.front() == '/') local_path = local_path.substr(1);
 
-    while (!local_path.empty()) {
+    while (local_path.find('/') != Brufs::String::npos) {
         auto slash_pos = local_path.find('/');
         Brufs::String component = local_path.substr(0, slash_pos);
         local_path = slash_pos != Brufs::String::npos ? local_path.substr(slash_pos + 1) : "";
@@ -103,7 +107,7 @@ int ls(int argc, char **argv) {
         status = dir.look_up(component.c_str(), entry);
         if (status < Brufs::Status::OK) {
             fprintf(stderr, "Unable to locate %s: %s\n", 
-                component.c_str(), Brufs::strerror(status)
+                component.c_str(), io.strstatus(status)
             );
 
             return 1;
@@ -113,7 +117,7 @@ int ls(int argc, char **argv) {
         status = root.open_directory(entry.inode_id, subdir);
         if (status < Brufs::Status::OK) {
             fprintf(stderr, "Unable to open %s as a directory: %s\n", 
-                component.c_str(), Brufs::strerror(status)
+                component.c_str(), io.strstatus(status)
             );
 
             return 1;
@@ -122,38 +126,70 @@ int ls(int argc, char **argv) {
         dir = subdir;
     }
 
-    Brufs::Vector<Brufs::DirectoryEntry> entries;
-    status = dir.collect(entries);
+    Brufs::DirectoryEntry entry;
+    status = dir.look_up(local_path, entry);
     if (status < Brufs::Status::OK) {
-        fprintf(stderr, "Unable to collect the directory's entries: %s\n",
-            Brufs::strerror(status)
+        fprintf(stderr, "Unable to locate %s to write to: %s\n", 
+            local_path.c_str(), io.strstatus(status)
         );
 
         return 1;
     }
 
     auto hdr = root.create_inode_header();
+    status = root.find_inode(entry.inode_id, hdr);
+    if (status < Brufs::Status::OK) {
+        fprintf(stderr, "Unable to open %s for writing: %s\n",
+            local_path.c_str(), io.strstatus(status)
+        );
 
-    for (const auto &entry : entries) {
-        char label[Brufs::MAX_LABEL_LENGTH + 1];
-        memcpy(label, entry.label, Brufs::MAX_LABEL_LENGTH);
-        label[Brufs::MAX_LABEL_LENGTH] = 0;
+        return 1;
+    }
 
-        Brufs::String inode_str = Util::pretty_print_inode_id(entry.inode_id);
+    Brufs::File file(root);
+    file.init(entry.inode_id, hdr);
+    root.destroy_inode_header(hdr);
 
-        status = root.find_inode(entry.inode_id, hdr);
-        if (status < Brufs::Status::OK) {
-            fprintf(stderr, "Unable to load inode %s: %s", inode_str.c_str(), io.strstatus(status));
-            continue;
+    auto buf = new char[TRANSFER_BUFFER_SIZE];
+    assert(buf);
+    Brufs::Offset offset = 0;
+
+    for (;;) {
+        auto num_read = fread(buf, 1, TRANSFER_BUFFER_SIZE, in_file);
+        if (num_read == 0) {
+            if (feof(in_file)) break;
+            if (ferror(in_file)) {
+                fprintf(stderr, "I/O error while reading from the source file: %s\n", 
+                    strerror(errno)
+                );
+
+                return 1;
+            }
+
+            assert("either eof or error, bad C library?" == nullptr);
         }
 
-        Brufs::String mtime_str = Util::pretty_print_timestamp(hdr->last_modified);
+        Brufs::Size num_transferred = 0;
+        while (num_transferred < num_read) {
+            auto num_written = file.write(
+                buf + num_transferred, num_read - num_transferred, offset + num_transferred
+            );
 
-        auto is_dir = hdr->type == Brufs::InodeType::DIRECTORY;
-        auto mode_str = Util::pretty_print_mode(is_dir, hdr->mode);
+            if (num_written < Brufs::Status::OK) {
+                fprintf(stderr, "Unable to write %lu bytes: %s\n", 
+                    num_read - num_transferred, io.strstatus(num_written)
+                );
 
-        printf("%s %s %lu %s%s\n", mode_str.c_str(), mtime_str.c_str(), hdr->file_size, label, is_dir ? "/" : "");
+                return 1;
+            }
+
+            num_transferred += num_written;
+        }
+
+        offset += num_transferred;
     }
+
+    printf("Copied %llu bytes: %s\n", offset, io.strstatus(status < 0 ? status : 0));
 
     return 0;
 }

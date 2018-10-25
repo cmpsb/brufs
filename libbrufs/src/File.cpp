@@ -58,7 +58,7 @@ Brufs::Status Brufs::File::resize_small_to_small(UNUSED const Size old_size, con
     memset(this->get_data() + new_size, 0, this->get_data_size() - new_size);
 
     this->set_size(new_size);
-    return Status::OK;
+    return this->store();
 }
 
 Brufs::Status Brufs::File::resize_big_to_small(UNUSED const Size old_size, const Size new_size) {
@@ -78,7 +78,7 @@ Brufs::Status Brufs::File::resize_big_to_small(UNUSED const Size old_size, const
     memcpy(this->get_data(), buf.data(), new_size);
     this->set_size(new_size);
 
-    return Status::OK;
+    return this->store();
 }
 
 Brufs::Status Brufs::File::resize_small_to_big(const Size old_size, const Size new_size) {
@@ -100,6 +100,9 @@ Brufs::Status Brufs::File::resize_small_to_big(const Size old_size, const Size n
 
     this->set_size(new_size);
 
+    status = this->store();
+    if (status < Status::OK) return status;
+
     DataExtent data_extent(block_extent, 0);
     return iet.insert(data_extent.get_local_last(), data_extent);
 }
@@ -107,7 +110,7 @@ Brufs::Status Brufs::File::resize_small_to_big(const Size old_size, const Size n
 Brufs::Status Brufs::File::resize_big_to_big(const Size old_size, const Size new_size) {
     if (new_size > old_size) {
         this->set_size(new_size);
-        return Status::OK;
+        return this->store();
     }
 
     auto fs = this->get_root().get_fs();
@@ -135,19 +138,25 @@ Brufs::Status Brufs::File::resize_big_to_big(const Size old_size, const Size new
 
     this->set_size(new_size);
 
-    return Status::OK;
+    return this->store();
 }
 
 Brufs::SSize Brufs::File::write(const void *buf, Size count, Offset offset) {
     if (count == 0) return 0;
 
-    if (offset + count > this->get_size()) this->truncate(count + offset);
+    if (offset + count > this->get_size()) {
+        auto status = this->truncate(count + offset);
+        if (status < Status::OK) return static_cast<SSize>(status);
+    }
 
     if (this->get_size() <= this->get_data_size()) {
         memcpy(this->get_data() + offset, buf, count);
+
+        auto status = this->store();
+        if (status < Status::OK) return static_cast<SSize>(status);
+
         return count;
     }
-
     
     InodeExtentTree iet(*this);
 

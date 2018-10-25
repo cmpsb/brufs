@@ -28,6 +28,7 @@
 
 #include "types.hpp"
 #include "xxhash/xxhash.h"
+#include "String.hpp"
 
 namespace Brufs {
 
@@ -48,6 +49,20 @@ struct DirectoryEntry {
     char label[MAX_LABEL_LENGTH];
 
     InodeId inode_id;
+
+    void set_label(const String &label) {
+        strncpy(this->label, label.c_str(), MAX_LABEL_LENGTH);
+    }
+
+    String get_label() const {
+        String str;
+
+        str.reserve(MAX_LABEL_LENGTH + 1);
+        strncpy(str, this->label, MAX_LABEL_LENGTH);
+        str.fit();
+
+        return str;
+    }
 
     Hash hash(const Hash seed = 14616742) const {
         char lbl[MAX_LABEL_LENGTH + 1];

@@ -62,6 +62,10 @@ public:
         return this->c_str();
     }
 
+    operator char *() {
+        return this->data();
+    }
+
     Size get_size() const {
         return Vector::get_size() - 1;
     }
@@ -98,6 +102,11 @@ public:
         substring.terminate();
 
         return substring;
+    }
+
+    void fit() {
+        this->terminate();
+        this->resize(strlen(this->c_str()) + 1);
     }
 };
 

@@ -38,22 +38,29 @@ static constexpr unsigned int IREAD  = 0000400;
 
 static const char *suffixes[] = {
         "B",
-        "kB",
-        "MB",
-        "GB",
-        "TB",
-        "PB",
-        "EB",
-        "ZB",
-        "YB"
+        "kiB",
+        "MiB",
+        "GiB",
+        "TiB",
+        "PiB",
+        "EiB",
+        "ZiB",
+        "YiB",
+        "XiB",
+        "WiB",
+        "ViB",
+        "UiB",
+        "SiB",
+        "HiB",
+        "FiB",
 };
 
-Brufs::String Util::pretty_print_bytes(Brufs::Size bytes) {
-    const double doubleBytes = bytes;
+Brufs::String Util::pretty_print_bytes(__uint128_t bytes) {
+    const long double doubleBytes = bytes;
     const int magnitude = (int) (std::log(doubleBytes) / std::log(1024));
 
     char buf[PPB_BUF_SIZE];
-    snprintf(buf, PPB_BUF_SIZE, "%3.1f %s", 
+    snprintf(buf, PPB_BUF_SIZE, "%3.1Lf %s", 
         doubleBytes / std::pow(1024, magnitude), suffixes[magnitude]
     );
 
@@ -114,12 +121,12 @@ Brufs::String Util::pretty_print_timestamp(const Brufs::Timestamp &ts) {
     return {buf};
 }
 
-Brufs::InodeId Util::generate_inode_id() {
+Brufs::InodeId Util::generate_inode_id(char alt) {
     std::random_device rd;
     std::mt19937 mt(rd());
     std::uniform_int_distribution<uint64_t> dist;
 
-    const Brufs::InodeId inode_id_low = dist(mt);
+    const Brufs::InodeId inode_id_low = (dist(mt) & ~0b11'1111) | alt;
     const Brufs::InodeId inode_id_high = dist(mt);
 
     return inode_id_high << 64 | inode_id_low;

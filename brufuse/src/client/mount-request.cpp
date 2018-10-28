@@ -25,7 +25,7 @@
 #include <uv.h>
 
 #include "Message.hpp"
-#include "service.hpp"
+#include "message-io.hpp"
 #include "mount-request.hpp"
 
 static uv_loop_t loop;
@@ -62,14 +62,9 @@ static void on_message_sent(uv_write_t *wreq, int status) {
     delete wreq;
 }
 
-static void on_connect(uv_connect_t *req, int status) {
+static void on_connect(uv_connect_t *req) {
     auto stream = req->handle;
     delete req;
-
-    if (status < 0) {
-        fprintf(stderr, "Unable to connect: %s\n", uv_strerror(status));
-        return;
-    }
 
     auto msg = new Brufuse::Message;
     msg->set_data_size(0);
@@ -81,19 +76,11 @@ static void on_connect(uv_connect_t *req, int status) {
 }
 
 int Brufuse::request_mount(
-    const std::string &socket_path,
+    uv_connect_t *req,
     const std::string &root_name,
     const std::string &mount_point,
     const std::vector<std::string> &fuse_args
 ) {
-    uv_loop_init(&loop);
-
-    auto ppe = new uv_pipe_t;
-    uv_pipe_init(&loop, ppe, false);
-
-    auto creq = new uv_connect_t;
-    uv_pipe_connect(creq, ppe, socket_path.c_str(), on_connect);
-
-    uv_run(&loop, UV_RUN_DEFAULT);
+    on_connect(req);
     return 1;
 }

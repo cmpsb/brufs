@@ -20,34 +20,9 @@
  * SOFTWARE.
  */
 
-#pragma once
+#include "stop-request.hpp"
 
-#include <string>
-#include <vector>
-
-#include <uv.h>
-
-#include "types.hpp"
-
-#include "Message.hpp"
-
-namespace Brufuse {
-
-int launch_service(
-    const std::string &socket_path, 
-    const unsigned int socket_mode,
-    const std::string &dev_path
-);
-
-void handle_connection(uv_pipe_t *client);
-
-int read_message(uv_stream_t *stream, OnFullMessage cb);
-
-static inline int read_message(uv_pipe_t *ppe, OnFullMessage cb) {
-    return read_message(reinterpret_cast<uv_stream_t *>(ppe), cb);
-}
-
-
-void write_message(uv_stream_t *stream, Message *message, OnMessageWritten cb);
-
+int Brufuse::request_stop(uv_connect_t *req) {
+    delete req;
+    return 0;
 }

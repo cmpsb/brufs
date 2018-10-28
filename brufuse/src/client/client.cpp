@@ -20,18 +20,35 @@
  * SOFTWARE.
  */
 
-#pragma once
+#include <uv.h>
 
-#include <string>
-#include <vector>
+#include "client.hpp"
 
-namespace Brufuse {
+static uv_loop_t loop;
+static uv_pipe_t *ppe;
 
-int request_mount(
-    const std::string &socket_path,
-    const std::string &root_name,
-    const std::string &mount_point,
-    const std::vector<std::string> &fuse_args
-);
+int Brufuse::run_client(const std::string &socket_path, uv_connect_cb cb) {
+    auto status = uv_loop_init(&loop);
+    if (status < 0) {
+        fprintf(stderr, "Unable to initialize the event loop: %s\n", uv_strerror(status));
+        return 1;
+    }
 
+    ppe = new uv_pipe_t;
+    status = uv_pipe_init(&loop, ppe, false);
+    if (status < 0) {
+        fprintf(stderr, "Unable to initialize the pipe to the server: %s\n", uv_strerror(status));
+        return 1;
+    }
+
+    auto creq = new uv_connect_t;
+    uv_pipe_connect(creq, ppe, socket_path.c_str(), cb);
+
+    status = uv_run(&loop, UV_RUN_DEFAULT);
+    if (status < 0) {
+        fprintf(stderr, "Unable to run the event loop: %s\n", uv_strerror(status));
+        return 1;
+    }
+
+    return 0;
 }

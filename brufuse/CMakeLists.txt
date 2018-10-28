@@ -1,8 +1,12 @@
 set(SOURCE_FILES
     src/main.cpp
-    src/mount-request.cpp
-    src/service.cpp
-    src/request.cpp
+    src/message-io.cpp
+    src/client/client.cpp
+    src/client/mount-request.cpp
+    src/client/status-request.cpp
+    src/client/stop-request.cpp
+    src/server/service.cpp
+    src/server/request.cpp
     src/slopt/opt.c
 )
 

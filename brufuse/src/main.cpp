@@ -31,8 +31,11 @@
 #include "xxhash/xxhash.h"
 #include "libbrufs.hpp"
 
-#include "service.hpp"
-#include "mount-request.hpp"
+#include "server/service.hpp"
+#include "client/client.hpp"
+#include "client/mount-request.hpp"
+#include "client/status-request.hpp"
+#include "client/stop-request.hpp"
 
 static slopt_Option options[] = {
     {'s', "socket", SLOPT_REQUIRE_ARGUMENT},
@@ -40,6 +43,7 @@ static slopt_Option options[] = {
     {'m', "mode", SLOPT_REQUIRE_ARGUMENT},
     {'o', "option", SLOPT_REQUIRE_ARGUMENT},
     {'d', "daemon", SLOPT_DISALLOW_ARGUMENT},
+    {'c', "command", SLOPT_REQUIRE_ARGUMENT},
     {0, nullptr, SLOPT_DISALLOW_ARGUMENT}
 };
 
@@ -52,6 +56,7 @@ static std::string root_name;
 static std::string mount_point;
 static std::vector<std::string> fuse_args;
 static bool is_daemon = false;
+static std::string command = "mount";
 
 static void apply_option(int sw, char snam, const char *lnam, const char *val, void *pl) {
     (void) pl;
@@ -84,6 +89,9 @@ static void apply_option(int sw, char snam, const char *lnam, const char *val, v
         case 'd':
             is_daemon = true;
             return;
+        case 'c':
+            command = val;
+            return;
         }
     }
 
@@ -103,7 +111,7 @@ static void apply_option(int sw, char snam, const char *lnam, const char *val, v
     }
 
     if (sw == SLOPT_DIRECT) {
-        fprintf(stderr, 
+        fprintf(stderr,
             "Don't know what to do with %s (device is %s, root is %s, mount point is %s)\n",
             val, dev_path.c_str(), root_name.c_str(), mount_point.c_str()
         );
@@ -149,7 +157,7 @@ static std::string hash_dev_path() {
 
     constexpr unsigned int BUF_SIZE = 128;
     char buf[BUF_SIZE];
-    snprintf(buf, BUF_SIZE, "%hX-%hX-%hX-%hX", 
+    snprintf(buf, BUF_SIZE, "%hX-%hX-%hX-%hX",
         (uint16_t) (hash >> 48),
         (uint16_t) (hash >> 32),
         (uint16_t) (hash >> 16),
@@ -186,6 +194,22 @@ void set_socket_path() {
     socket_path = build_socket_path();
 }
 
+static void on_client_connect(uv_connect_t *req, int status) {
+    if (status < 0) {
+        fprintf(stderr, "Unable to connect: %s\n", uv_strerror(status));
+        delete req;
+        return;
+    }
+
+    if (command == "status") {
+        Brufuse::request_status(req, root_name);
+    } else if (command == "mount") {
+        Brufuse::request_mount(req, root_name, mount_point, fuse_args);
+    } else if (command == "stop") {
+        Brufuse::request_stop(req);
+    }
+}
+
 int main(int argc, char **argv) {
     slopt_parse(argc - 1, argv + 1, options, apply_option, nullptr);
 
@@ -196,6 +220,6 @@ int main(int argc, char **argv) {
     if (is_daemon) {
         return Brufuse::launch_service(socket_path, socket_mode, dev_path);
     } else {
-        return Brufuse::request_mount(socket_path, root_name, mount_point, fuse_args);
+        return Brufuse::run_client(socket_path, on_client_connect);
     }
 }

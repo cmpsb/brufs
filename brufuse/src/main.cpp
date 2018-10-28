@@ -194,8 +194,8 @@ int main(int argc, char **argv) {
     set_socket_path();
 
     if (is_daemon) {
-        return launch_service(socket_path, socket_mode, dev_path);
+        return Brufuse::launch_service(socket_path, socket_mode, dev_path);
     } else {
-        return request_mount(socket_path, root_name, mount_point, fuse_args);
+        return Brufuse::request_mount(socket_path, root_name, mount_point, fuse_args);
     }
 }

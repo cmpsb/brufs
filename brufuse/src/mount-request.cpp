@@ -22,14 +22,78 @@
 
 #include <cstdio>
 
+#include <uv.h>
+
+#include "Message.hpp"
+#include "service.hpp"
 #include "mount-request.hpp"
 
-int request_mount(
+static uv_loop_t loop;
+
+static void on_close(uv_handle_t *handle) {
+    delete handle;
+}
+
+static void on_response(uv_stream_t *stream, Brufuse::Message *res) {
+    printf("Response: length %lu; type %u; status %u\n",
+        res->get_data_size(),
+        res->get_type(),
+        res->get_status()
+    );
+
+    uv_close(reinterpret_cast<uv_handle_t *>(stream), on_close);
+    delete res;
+}
+
+static void on_message_sent(uv_write_t *wreq, int status) {
+    auto stream = wreq->handle;
+    auto msg = static_cast<Brufuse::Message *>(stream->data);
+
+    if (status >= 0) {
+        status = Brufuse::read_message(stream, on_response);
+        if (status < 0) {
+            fprintf(stderr, "Unable to read the response: %s\n", uv_strerror(status));
+        }
+    } else {
+        fprintf(stderr, "Unable to write the message: %s\n", uv_strerror(status));
+    }
+
+    delete msg;
+    delete wreq;
+}
+
+static void on_connect(uv_connect_t *req, int status) {
+    auto stream = req->handle;
+    delete req;
+
+    if (status < 0) {
+        fprintf(stderr, "Unable to connect: %s\n", uv_strerror(status));
+        return;
+    }
+
+    auto msg = new Brufuse::Message;
+    msg->set_data_size(0);
+    msg->set_sequence(0);
+    msg->set_type(Brufuse::RequestType::NONE);
+    msg->set_status(Brufuse::StatusCode::OK);
+
+    Brufuse::write_message(stream, msg, on_message_sent);
+}
+
+int Brufuse::request_mount(
     const std::string &socket_path,
     const std::string &root_name,
     const std::string &mount_point,
     const std::vector<std::string> &fuse_args
 ) {
-    fprintf(stderr, "mount requests not implemented yet\n");
+    uv_loop_init(&loop);
+
+    auto ppe = new uv_pipe_t;
+    uv_pipe_init(&loop, ppe, false);
+
+    auto creq = new uv_connect_t;
+    uv_pipe_connect(creq, ppe, socket_path.c_str(), on_connect);
+
+    uv_run(&loop, UV_RUN_DEFAULT);
     return 1;
 }

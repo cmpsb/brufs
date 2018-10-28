@@ -25,9 +25,13 @@
 #include <string>
 #include <vector>
 
+namespace Brufuse {
+
 int request_mount(
     const std::string &socket_path,
     const std::string &root_name,
     const std::string &mount_point,
     const std::vector<std::string> &fuse_args
 );
+
+}

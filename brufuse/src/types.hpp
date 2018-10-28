@@ -22,32 +22,13 @@
 
 #pragma once
 
-#include <string>
-#include <vector>
-
 #include <uv.h>
-
-#include "types.hpp"
-
-#include "Message.hpp"
 
 namespace Brufuse {
 
-int launch_service(
-    const std::string &socket_path, 
-    const unsigned int socket_mode,
-    const std::string &dev_path
-);
+class Message;
 
-void handle_connection(uv_pipe_t *client);
-
-int read_message(uv_stream_t *stream, OnFullMessage cb);
-
-static inline int read_message(uv_pipe_t *ppe, OnFullMessage cb) {
-    return read_message(reinterpret_cast<uv_stream_t *>(ppe), cb);
-}
-
-
-void write_message(uv_stream_t *stream, Message *message, OnMessageWritten cb);
+using OnFullMessage = void (*)(uv_stream_t *, Message *);
+using OnMessageWritten = void (*)(uv_write_t *wreq, int status);
 
 }

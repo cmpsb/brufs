@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2018 Luc Everse <luc@wukl.net>
+ * Copyright (c) 2017-2018 Luc Everse <luc@cmpsb.net>
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -20,35 +20,9 @@
  * SOFTWARE.
  */
 
-#include "message-io.hpp"
-#include "stop-request.hpp"
-#include "uv-helper.hpp"
+#pragma once
 
-static void on_response(uv_stream_t *stream, Brufuse::Message *res) {
-    auto status = res->get_status();
-    if (status != Brufuse::StatusCode::OK) {
-        fprintf(stderr, "Unable to stop the server: %hhu\n", status);
-    }
-
-    Brufuse::close_and_free(stream);
-    delete res;
-}
-
-static void on_message_sent(uv_write_t *wreq, int status) {
-    Brufuse::await_response(wreq, status, on_response);
-}
-
-int Brufuse::request_stop(uv_connect_t *req) {
-    auto stream = req->handle;
-    delete req;
-
-    auto msg = new Message;
-    msg->set_data_size(0);
-    msg->set_sequence(0);
-    msg->set_type(RequestType::STOP);
-    msg->set_status(StatusCode::OK);
-
-    Brufuse::write_message(stream, msg, on_message_sent);
-
-    return 0;
-}
+#define BRUFS_VERSION_MAJOR ${BRUFS_VERSION_MAJOR}
+#define BRUFS_VERSION_MINOR ${BRUFS_VERSION_MINOR}
+#define BRUFS_VERSION_PATCH ${BRUFS_VERSION_PATCH}
+#cmakedefine BRUFS_NANOSECOND_TIMESTAMP

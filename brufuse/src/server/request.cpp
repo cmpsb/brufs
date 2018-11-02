@@ -22,14 +22,9 @@
 
 #include "service.hpp"
 #include "message-io.hpp"
+#include "uv-helper.hpp"
 
-static void on_read(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buf);
-static void on_alloc(uv_handle_t *handle, size_t suggested_size, uv_buf_t *buf);
 static void handle_request(uv_stream_t *stream, Brufuse::Message *req);
-
-static void on_close(uv_handle_t *handle) {
-    delete handle;
-}
 
 static void on_write(uv_write_t *wreq, int status) {
     Brufuse::Message *message = static_cast<Brufuse::Message *>(wreq->handle->data);
@@ -38,12 +33,12 @@ static void on_write(uv_write_t *wreq, int status) {
         fprintf(stderr, "Unable to write reply %u: %s\n",
             message->get_sequence(), uv_strerror(status)
         );
-        uv_close(reinterpret_cast<uv_handle_t *>(wreq->handle), on_close);
+        Brufuse::close_and_free(wreq->handle);
     } else {
         status = Brufuse::read_message(wreq->handle, handle_request);
         if (status < 0) {
             fprintf(stderr, "Unable to start reading.\n");
-            uv_close(reinterpret_cast<uv_handle_t *>(wreq->handle), on_close);
+            Brufuse::close_and_free(wreq->handle);
         }
     }
 
@@ -76,6 +71,12 @@ static void handle_request(uv_stream_t *stream, Brufuse::Message *req) {
     switch (req->get_type()) {
     case Brufuse::RequestType::NONE:
         break;
+    case Brufuse::RequestType::STOP:
+        Brufuse::stop_service();
+        break;
+    case Brufuse::RequestType::MOUNT:
+        Brufuse::handle_mount_request(*req, res);
+        break;
     default:
         res->set_status(Brufuse::StatusCode::INTERNAL_ERROR);
         break;
@@ -89,6 +90,6 @@ void Brufuse::handle_connection(uv_pipe_t *client) {
     int status = read_message(client, handle_request);
     if (status < 0) {
         fprintf(stderr, "Unable to start reading.\n");
-        uv_close(reinterpret_cast<uv_handle_t *>(client), on_close);
+        Brufuse::close_and_free(client);
     }
 }

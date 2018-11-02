@@ -44,12 +44,12 @@ namespace Brufs { namespace BmTree {
 
 template <>
 bool equiv_values(const RootHeader *current, const RootHeader *replacement) {
-    return strncmp(current->label, replacement->label, MAX_LABEL_LENGTH - 1) == 0;
+    return strncmp(current->label, replacement->label, MAX_LABEL_LENGTH) == 0;
 }
 
 }}
 
-Brufs::Brufs::Brufs(Disk *dsk) : 
+Brufs::Brufs::Brufs(Disk *dsk) :
         dsk(dsk), fbt(this, nullptr, BmTree::ALLOC_FBT_BLOCK), rht(this, nullptr)
 {
     Header temp_header;
@@ -110,7 +110,7 @@ Brufs::Status Brufs::Brufs::init(Header &protoheader) {
     this->hdr->ver = lib_version;
     this->hdr->header_size = sizeof(Header);
     this->hdr->checksum = 0;
-    
+
     this->hdr->cluster_size = (1 << protoheader.cluster_size_exp);
     this->hdr->cluster_size_exp = protoheader.cluster_size_exp;
 
@@ -140,7 +140,7 @@ Brufs::Status Brufs::Brufs::init(Header &protoheader) {
 
         stt = this->fbt.insert(INITIAL_FREE_EXTENT_LENGTH, free_ext);
         if (stt < Status::OK) return stt;
-        
+
         dyn_start += INITIAL_FREE_EXTENT_LENGTH;
         remaining -= INITIAL_FREE_EXTENT_LENGTH;
     }
@@ -184,7 +184,7 @@ Brufs::Status Brufs::Brufs::allocate_blocks(Size length, Extent &target) {
         if (status < Status::OK) return status;
 
         while (
-            replacement.length >= this->hdr->cluster_size 
+            replacement.length >= this->hdr->cluster_size
             && this->hdr->sc_count < this->hdr->sc_low_mark
         ) {
             list[this->hdr->sc_count] = replacement;

@@ -83,17 +83,23 @@ int add_root(int argc, char **argv) {
         return 1;
     }
 
+    mode_t mode_mask = umask(0);
+    umask(mode_mask);
+
     Brufs::Directory root_dir(root);
 
     auto rdh = root_dir.get_header();
     rdh->created = Brufs::Timestamp::now();
     rdh->last_modified = Brufs::Timestamp::now();
+    rdh->owner = geteuid();
+    rdh->group = getegid();
     rdh->num_links = 1;
     rdh->type = Brufs::InodeType::DIRECTORY;
     rdh->flags = 0;
     rdh->num_extents = 0;
     rdh->file_size = 0;
     rdh->checksum = 0;
+    rdh->mode = 0777 & ~mode_mask;
 
     status = root.insert_inode(Brufs::ROOT_DIR_INODE_ID, root_dir.get_header());
     if (status < Brufs::Status::OK) {

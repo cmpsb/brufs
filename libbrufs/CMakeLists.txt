@@ -22,12 +22,12 @@ set(TEST_FILES
     test/btree-update.cpp
 )
 
-configure_file(cmake/version.in.hpp version-info.hpp)
+configure_file(cmake/config.in.hpp config.hpp)
 
 include_directories(include ${CMAKE_CURRENT_BINARY_DIR})
 
 add_library(brufs ${SOURCE_FILES})
-set_target_properties(brufs PROPERTIES PUBLIC_HEADER 
+set_target_properties(brufs PROPERTIES PUBLIC_HEADER
     include/brufs.h
     include/btree.h
     include/rtstructures.h

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2018 Luc Everse <luc@cmpsb.net>
+ * Copyright (c) 2017-2018 Luc Everse <luc@wukl.net>
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -20,8 +20,48 @@
  * SOFTWARE.
  */
 
-#pragma once
+#include <cstdio>
+#include <cerrno>
+#include <cstring>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 
-#define BRUFS_VERSION_MAJOR ${BRUFS_VERSION_MAJOR}
-#define BRUFS_VERSION_MINOR ${BRUFS_VERSION_MINOR}
-#define BRUFS_VERSION_PATCH ${BRUFS_VERSION_PATCH}
+#include <stdexcept>
+
+#include <uv.h>
+
+#include "libbrufs.hpp"
+
+#include "service.hpp"
+#include "FdAbst.hpp"
+
+Brufuse::FdAbst *Brufuse::fs_io;
+Brufs::Brufs *Brufuse::fs;
+
+uv_rwlock_t Brufuse::fs_rwlock;
+
+namespace Brufuse {
+
+class BrufsException : public std::runtime_error {
+    using std::runtime_error::runtime_error;
+};
+
+}
+
+void Brufuse::open_fs(const std::string &dev_path) {
+    int iofd = open(dev_path.c_str(), O_RDWR);
+    if (iofd == -1) {
+        throw BrufsException("Unable to open " + dev_path + ": " + strerror(errno));
+    }
+
+    fs_io = new FdAbst(iofd);
+    fs = new Brufs::Brufs(new Brufs::Disk(fs_io));
+    if (fs->get_status() < Brufs::Status::OK) {
+        throw BrufsException(
+            "Unable to open " + dev_path + ": " + fs_io->strstatus(fs->get_status())
+        );
+    }
+
+    uv_rwlock_init(&fs_rwlock);
+}

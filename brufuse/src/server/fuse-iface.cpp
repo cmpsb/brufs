@@ -1,0 +1,839 @@
+/*
+ * Copyright (c) 2017-2018 Luc Everse <luc@wukl.net>
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+
+#include <cerrno>
+
+// Not yet in userspace, taken from kernel definitions
+#ifndef RENAME_NOREPLACE
+#  define RENAME_NOREPLACE (1 << 0)
+#endif
+
+#ifndef RENAME_EXCHANGE
+#  define RENAME_EXCHANGE (1 << 1)
+#endif
+
+#ifndef RENAME_WHITEOUT
+#  define RENAME_WHITEOUT (1 << 2)
+#endif
+
+#include <random>
+
+#include "service.hpp"
+
+static constexpr double DEFAULT_ATTR_TIMEOUT = 1;
+
+fuse_lowlevel_ops Brufuse::fs_ops;
+
+static Brufs::InodeId ino_to_inode_id(fuse_ino_t ino) {
+    if (ino == 1) return Brufs::ROOT_DIR_INODE_ID;
+    return static_cast<Brufs::InodeId>(ino) << 6;
+}
+
+static inline fuse_ino_t inode_id_to_ino(Brufs::InodeId inode_id) {
+    return static_cast<fuse_ino_t>(inode_id >> 6);
+}
+
+static inline Brufuse::MountedRoot *get_root_handle(fuse_req_t req) {
+    return static_cast<Brufuse::MountedRoot *>(fuse_req_userdata(req));
+}
+
+/**
+ * Maps a Brufs status code to a Unix errno.
+ *
+ * NB: there is no direct 1:1 relation between the codes, you may have to return a different
+ * errno for a status code in some cases.
+ *
+ * The worst case is E_WRONG_INODE_TYPE, which is translated to ENOTDIR by default since there is no
+ * corresponding context-sensitive errno. Tweak this value using the following parameter:
+ *
+ * @param on_wrong_inode_type the errno to return if the status is E_WRONG_INODE_TYPE
+ *
+ * @param status [description]
+ * @return [description]
+ */
+static int status_to_errno_trace(const char *func, Brufs::Status status, int on_wrong_inode_type = ENOTDIR) {
+    fprintf(stderr, "Translating error %s (%d) into errno in %s\n",
+        Brufuse::fs_io->strstatus(status), status, func
+    );
+
+    switch (status) {
+        case Brufs::Status::E_INTERNAL: ;
+        case Brufs::Status::E_NO_MEM: return ENOMEM;
+        case Brufs::Status::E_DISK_TRUNCATED: return EIO;
+        case Brufs::Status::E_BAD_MAGIC: return EIO;
+        case Brufs::Status::E_FS_FROM_FUTURE: return EIO;
+        case Brufs::Status::E_HEADER_TOO_BIG: return EIO;
+        case Brufs::Status::E_HEADER_TOO_SMALL: return EIO;
+        case Brufs::Status::E_CHECKSUM_MISMATCH: return EIO;
+        case Brufs::Status::E_NO_SPACE: return ENOSPC;
+        case Brufs::Status::E_WONT_FIT: return EFBIG;
+        case Brufs::Status::E_NOT_FOUND: return ENOENT;
+        case Brufs::Status::E_TOO_MANY_RETRIES: return EDEADLK;
+        case Brufs::Status::E_AT_MAX_LEVEL: return ENOSPC;
+        case Brufs::Status::E_CANT_ADOPT: return ENOSPC;
+        case Brufs::Status::E_MISALIGNED: return EINVAL;
+        case Brufs::Status::E_NO_FBT: return EIO;
+        case Brufs::Status::E_NO_RHT: return EIO;
+        case Brufs::Status::E_EXISTS: return EEXIST;
+        case Brufs::Status::E_PILEUP: return ENOSPC;
+        case Brufs::Status::E_BEYOND_EOF: return EINVAL;
+        case Brufs::Status::E_STOPPED: return ECANCELED;
+        case Brufs::Status::E_WRONG_INODE_TYPE: return on_wrong_inode_type;
+        case Brufs::Status::OK: return 0;
+        case Brufs::Status::RETRY: return ERESTART;
+        case Brufs::Status::STOP: return 0;
+        default: return -1;
+    }
+}
+
+#define status_to_errno(...) status_to_errno_trace(__FUNCTION__, __VA_ARGS__)
+
+static bool is_correct_perms(int mask, unsigned int mode) {
+    return ((!(mask & R_OK)) || ((mode >> 2) & 1))
+        && ((!(mask & W_OK)) || ((mode >> 1) & 1))
+        && ((!(mask & X_OK)) || ((mode >> 0) & 1));
+}
+
+static void on_access(fuse_req_t req, fuse_ino_t ino, int mask) {
+    Brufuse::ReadLock lock;
+    const auto context = fuse_req_ctx(req);
+    auto root_handle = get_root_handle(req);
+    auto root = root_handle->root;
+
+    auto inode_header = root->create_inode_header();
+    auto status = root->find_inode(ino_to_inode_id(ino), inode_header);
+    if (status < Brufs::Status::OK) {
+        fuse_reply_err(req, status_to_errno(status));
+        root->destroy_inode_header(inode_header);
+        return;
+    }
+
+    if (mask == F_OK) {
+        fuse_reply_err(req, 0);
+        root->destroy_inode_header(inode_header);
+        return;
+    }
+
+    int shift = 0;
+    if (context->uid == inode_header->owner) shift = 6;
+    else if (context->gid == inode_header->group) shift = 3;
+
+    fuse_reply_err(req, is_correct_perms(mask >> shift, inode_header->mode) ? 0 : EACCES);
+
+    root->destroy_inode_header(inode_header);
+}
+
+static mode_t inode_header_to_mode(Brufs::InodeHeader *inode_header) {
+    mode_t mode = inode_header->mode;
+
+    switch (inode_header->type) {
+        case Brufs::InodeType::NONE: break;
+        case Brufs::InodeType::FILE: mode |= S_IFREG; break;
+        case Brufs::InodeType::DIRECTORY: mode |= S_IFDIR; break;
+        case Brufs::InodeType::SOFT_LINK: mode |= S_IFLNK; break;
+        default: assert(false);
+    }
+
+    return mode;
+}
+
+static void inode_header_to_stat(
+    Brufs::InodeId inode_id, Brufs::InodeHeader *inode_header, struct stat &attr
+) {
+    attr.st_ino = inode_id_to_ino(inode_id);
+    attr.st_mode = inode_header_to_mode(inode_header);
+    attr.st_nlink = inode_header->num_links ? inode_header->num_links : 1;
+    attr.st_uid = static_cast<uid_t>(inode_header->owner);
+    attr.st_gid = static_cast<gid_t>(inode_header->group);
+    attr.st_size = inode_header->file_size;
+    attr.st_blocks = inode_header->file_size / 512;
+
+    attr.st_atim.tv_sec = inode_header->last_modified.seconds;
+    attr.st_atim.tv_nsec = inode_header->last_modified.nanoseconds;
+
+    attr.st_mtim.tv_sec = inode_header->last_modified.seconds;
+    attr.st_mtim.tv_nsec = inode_header->last_modified.nanoseconds;
+
+    attr.st_ctim.tv_sec = inode_header->created.seconds;
+    attr.st_ctim.tv_nsec = inode_header->created.nanoseconds;
+}
+
+static int get_attr(fuse_req_t req, Brufs::InodeId inode_id, struct stat &attr) {
+    Brufuse::ReadLock lock;
+    auto root_handle = get_root_handle(req);
+    auto root = root_handle->root;
+
+    Brufs::Inode inode(*root);
+    auto status = root->open_inode(inode_id, inode);
+    if (status < Brufs::Status::OK) {
+        return status_to_errno(status);
+    }
+
+    inode_header_to_stat(inode_id, inode.get_header(), attr);
+
+    return 0;
+}
+
+static void on_getattr(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi) {
+    (void) fi; // "for future use, currently always NULL"
+
+    fprintf(stderr, "getattr %lu\n", ino);
+
+    struct stat attr;
+    int status = get_attr(req, ino_to_inode_id(ino), attr);
+    if (status < 0) {
+        fuse_reply_err(req, status);
+        return;
+    }
+
+    fuse_reply_attr(req, &attr, DEFAULT_ATTR_TIMEOUT);
+}
+
+static void on_lookup(fuse_req_t req, fuse_ino_t parent, const char *name) {
+    fprintf(stderr, "lookup %lu -> %s\n", parent, name);
+
+    Brufuse::ReadLock lock;
+    auto root_handle = get_root_handle(req);
+    auto root = root_handle->root;
+    auto inode_id = ino_to_inode_id(parent);
+
+    Brufs::Directory dir(*root);
+    auto status = root->open_directory(inode_id, dir);
+    if (status < Brufs::Status::OK) {
+        fuse_reply_err(req,
+            status == Brufs::Status::E_WRONG_INODE_TYPE ? ENOTDIR : status_to_errno(status)
+        );
+        return;
+    }
+
+    Brufs::DirectoryEntry entry;
+    status = dir.look_up(name, entry);
+    if (status < Brufs::Status::OK) {
+        fuse_reply_err(req, status_to_errno(status));
+        return;
+    }
+
+    struct fuse_entry_param fuse_entry;
+    fuse_entry.ino = inode_id_to_ino(entry.inode_id);
+    fuse_entry.generation = 1;
+    fuse_entry.attr_timeout = DEFAULT_ATTR_TIMEOUT;
+    fuse_entry.entry_timeout = DEFAULT_ATTR_TIMEOUT;
+
+    int estatus = get_attr(req, entry.inode_id, fuse_entry.attr);
+    if (estatus < 0) {
+        fuse_reply_err(req, estatus);
+        return;
+    }
+
+    fuse_reply_entry(req, &fuse_entry);
+}
+
+static void on_mkdir(fuse_req_t req, fuse_ino_t parent, const char *name, mode_t mode) {
+    Brufuse::WriteLock lock;
+    const auto context = fuse_req_ctx(req);
+    auto root_handle = get_root_handle(req);
+    auto root = root_handle->root;
+    auto parent_inode_id = ino_to_inode_id(parent);
+
+    fprintf(stderr, "mkdir: open %lu\n", parent);
+
+    Brufs::Directory dir(*root);
+    auto status = root->open_directory(parent_inode_id, dir);
+    if (status < Brufs::Status::OK) {
+        fuse_reply_err(req, status_to_errno(status, ENOTDIR));
+        return;
+    }
+
+    Brufs::Directory new_dir(*root);
+
+    auto rdh = new_dir.get_header();
+    rdh->created = Brufs::Timestamp::now();
+    rdh->last_modified = Brufs::Timestamp::now();
+    rdh->owner = context->uid;
+    rdh->group = context->gid;
+    rdh->num_links = 1;
+    rdh->type = Brufs::InodeType::DIRECTORY;
+    rdh->flags = 0;
+    rdh->num_extents = 0;
+    rdh->file_size = 0;
+    rdh->checksum = 0;
+    rdh->mode = mode;
+
+    std::random_device rd;
+    std::mt19937 mt(rd());
+    std::uniform_int_distribution<uint64_t> dist;
+
+    auto new_inode_id = ino_to_inode_id(dist(mt));
+
+    fprintf(stderr, "mkdir: insert_inode\n");
+
+    status = root->insert_inode(new_inode_id, new_dir);
+    if (status < Brufs::Status::OK) goto reply_status;
+
+    fprintf(stderr, "mkdir: init\n");
+
+    status = new_dir.init(new_inode_id, rdh);
+    if (status < Brufs::Status::OK) goto reply_status;
+
+    Brufs::DirectoryEntry entry;
+    entry.set_label(name);
+    entry.inode_id = new_inode_id;
+
+    fprintf(stderr, "mkdir: insert in parent\n");
+
+    status = dir.insert(entry);
+    if (status < Brufs::Status::OK) goto clean_on_error;
+
+    fprintf(stderr, "mkdir: insert .\n");
+
+    Brufs::DirectoryEntry dot_entry;
+    dot_entry.set_label(".");
+    dot_entry.inode_id = new_inode_id;
+    status = new_dir.insert(dot_entry);
+    if (status < Brufs::Status::OK) goto clean_on_error;
+
+    fprintf(stderr, "mkdir: insert ..\n");
+
+    Brufs::DirectoryEntry dot_dot_entry;
+    dot_dot_entry.set_label("..");
+    dot_dot_entry.inode_id = parent_inode_id;
+    status = new_dir.insert(dot_dot_entry);
+    if (status < Brufs::Status::OK) goto clean_on_error;
+
+    struct fuse_entry_param fuse_entry;
+    fuse_entry.ino = inode_id_to_ino(new_inode_id);
+    fuse_entry.generation = 1;
+    fuse_entry.attr_timeout = DEFAULT_ATTR_TIMEOUT;
+    fuse_entry.entry_timeout = DEFAULT_ATTR_TIMEOUT;
+
+    inode_header_to_stat(new_inode_id, rdh, fuse_entry.attr);
+
+    fuse_reply_entry(req, &fuse_entry);
+    return;
+
+clean_on_error: {
+        auto actual_status = status; // Prevent modification by destroy and remove
+
+        new_dir.destroy();
+        root->remove_inode(new_inode_id, new_dir);
+
+        status = actual_status;
+    }
+
+    // fall through
+reply_status:
+    fuse_reply_err(req, status_to_errno(status));
+    return;
+}
+
+static void on_mknod(fuse_req_t req, fuse_ino_t parent, const char *name, mode_t mode, dev_t rdev) {
+    (void) rdev; // Not supported by Brufs
+
+    Brufuse::WriteLock lock;
+    const auto context = fuse_req_ctx(req);
+    auto root_handle = get_root_handle(req);
+    auto root = root_handle->root;
+    auto parent_inode_id = ino_to_inode_id(parent);
+
+    Brufs::Directory dir(*root);
+    auto status = root->open_directory(parent_inode_id, dir);
+    if (status < Brufs::Status::OK) {
+        fuse_reply_err(req, status_to_errno(status, ENOTDIR));
+        return;
+    }
+
+    Brufs::File new_file(*root);
+
+    auto rdh = new_file.get_header();
+    rdh->created = Brufs::Timestamp::now();
+    rdh->last_modified = Brufs::Timestamp::now();
+    rdh->owner = context->uid;
+    rdh->group = context->gid;
+    rdh->num_links = 1;
+    rdh->type = Brufs::InodeType::FILE;
+    rdh->flags = 0;
+    rdh->num_extents = 0;
+    rdh->file_size = 0;
+    rdh->checksum = 0;
+    rdh->mode = mode;
+
+    std::random_device rd;
+    std::mt19937 mt(rd());
+    std::uniform_int_distribution<uint64_t> dist;
+
+    auto new_inode_id = ino_to_inode_id(dist(mt));
+
+    status = root->insert_inode(new_inode_id, new_file);
+    if (status < Brufs::Status::OK) goto reply_status;
+
+    status = new_file.init(new_inode_id, rdh);
+    if (status < Brufs::Status::OK) goto reply_status;
+
+    Brufs::DirectoryEntry entry;
+    entry.set_label(name);
+    entry.inode_id = new_inode_id;
+
+    status = dir.insert(entry);
+    if (status < Brufs::Status::OK) goto clean_on_error;
+
+    struct fuse_entry_param fuse_entry;
+    fuse_entry.ino = inode_id_to_ino(new_inode_id);
+    fuse_entry.generation = 1;
+    fuse_entry.attr_timeout = DEFAULT_ATTR_TIMEOUT;
+    fuse_entry.entry_timeout = DEFAULT_ATTR_TIMEOUT;
+
+    inode_header_to_stat(new_inode_id, rdh, fuse_entry.attr);
+
+    fuse_reply_entry(req, &fuse_entry);
+    return;
+
+clean_on_error:
+    new_file.destroy();
+    root->remove_inode(new_inode_id, new_file);
+
+    // fall through
+reply_status:
+    fuse_reply_err(req, status_to_errno(status));
+    return;
+}
+
+static void on_open(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi) {
+    Brufuse::ReadLock lock;
+    auto root_handle = get_root_handle(req);
+    auto root = root_handle->root;
+    auto inode_id = ino_to_inode_id(ino);
+
+    auto file = new Brufs::File(*root);
+    auto status = root->open_file(inode_id, *file);
+    if (status < Brufs::Status::OK) {
+        fuse_reply_err(req, status_to_errno(status, ENOTDIR));
+        delete file;
+        return;
+    }
+
+    fi->fh = reinterpret_cast<uint64_t>(file);
+    fi->direct_io = false;
+    fi->keep_cache = true;
+
+    fuse_reply_open(req, fi);
+}
+
+static void on_opendir(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi) {
+    fprintf(stderr, "opendir %lu\n", ino);
+    Brufuse::ReadLock lock;
+    auto root_handle = get_root_handle(req);
+    auto root = root_handle->root;
+    auto inode_id = ino_to_inode_id(ino);
+
+    auto dir = new Brufs::Directory(*root);
+    auto status = root->open_directory(inode_id, *dir);
+    if (status < Brufs::Status::OK) {
+        fuse_reply_err(req, status_to_errno(status, ENOTDIR));
+        delete dir;
+        return;
+    }
+
+    fi->fh = reinterpret_cast<uint64_t>(dir);
+    fi->direct_io = false;
+    fi->keep_cache = true;
+
+    fuse_reply_open(req, fi);
+}
+
+static void on_read(
+    fuse_req_t req, fuse_ino_t ino, size_t size, off_t off, struct fuse_file_info *fi
+) {
+    (void) ino; // Known through fi->fh
+
+    Brufuse::ReadLock lock;
+    auto file = reinterpret_cast<Brufs::File *>(fi->fh);
+
+    auto uoff = static_cast<size_t>(off);
+    if (off < 0 || uoff >= file->get_header()->file_size) {
+        fuse_reply_err(req, EINVAL);
+        return;
+    }
+
+    auto true_size = std::min(uoff + size, file->get_header()->file_size) - uoff;
+    auto buf = new char[true_size];
+
+    size_t total = 0;
+    while (total < true_size) {
+        auto num_read = file->read(buf + total, true_size - total, uoff + total);
+        if (num_read < Brufs::Status::OK) {
+            delete[] buf;
+            fuse_reply_err(req, status_to_errno(static_cast<Brufs::Status>(num_read)));
+            return;
+        }
+
+        total += num_read;
+    }
+
+    fuse_reply_buf(req, buf, total);
+    delete[] buf;
+}
+
+static void on_readdir(
+    fuse_req_t req, fuse_ino_t ino, size_t size, off_t off, struct fuse_file_info *fi
+) {
+    (void) ino; // Known through fi->fh
+
+    Brufuse::ReadLock lock;
+    auto root_handle = get_root_handle(req);
+    auto root = root_handle->root;
+    auto dir = reinterpret_cast<Brufs::Directory *>(fi->fh);
+
+    Brufs::Vector<Brufs::DirectoryEntry> entries;
+    auto status = dir->collect(entries);
+    if (status < Brufs::Status::OK) {
+        fprintf(stderr, "readdir: collect %d\n", status);
+        fuse_reply_err(req, status_to_errno(status));
+        return;
+    }
+
+    auto buf = new char[size];
+    size_t total = 0;
+    auto hdr = root->create_inode_header();
+
+    for (size_t i = static_cast<size_t>(off); i < entries.get_size(); ++i) {
+        const auto &entry = entries[i];
+        char label[Brufs::MAX_LABEL_LENGTH + 1];
+        memcpy(label, entry.label, Brufs::MAX_LABEL_LENGTH);
+        label[Brufs::MAX_LABEL_LENGTH] = 0;
+
+        status = root->find_inode(entry.inode_id, hdr);
+        if (status < Brufs::Status::OK) {
+            fprintf(stderr, "readdir: find_inode %s %lX:%lX -> %s\n",
+                label,
+                (uint64_t) (entry.inode_id >> 64), (uint64_t) (entry.inode_id),
+                Brufuse::fs_io->strstatus(status)
+            );
+            memset(hdr, 0, sizeof(Brufs::InodeHeader));
+        }
+
+        struct stat attr;
+        inode_header_to_stat(entry.inode_id, hdr, attr);
+        size_t entry_size = fuse_add_direntry(
+            req, buf + total, size - total, label, &attr, static_cast<off_t>(i + 1)
+        );
+
+        if (entry_size > size - total) break;
+
+        total += entry_size;
+    }
+
+    root->destroy_inode_header(hdr);
+
+    fuse_reply_buf(req, buf, total);
+
+    delete[] buf;
+}
+
+void on_release(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi) {
+    (void) ino; // Known through fi->fh
+
+    auto file = reinterpret_cast<Brufs::File *>(fi->fh);
+    delete file;
+
+    fuse_reply_err(req, 0);
+}
+
+void on_releasedir(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi) {
+    (void) ino; // Known through fi->fh
+
+    auto dir = reinterpret_cast<Brufs::Directory *>(fi->fh);
+    delete dir;
+
+    fuse_reply_err(req, 0);
+}
+
+void on_rename(
+    fuse_req_t req,
+    fuse_ino_t old_parent_ino, const char *old_name,
+    fuse_ino_t new_parent_ino, const char *new_name,
+    unsigned int flags
+) {
+    Brufuse::WriteLock lock;
+    auto root_handle = get_root_handle(req);
+    auto root = root_handle->root;
+
+    bool new_already_exists;
+
+    Brufs::Directory old_parent(*root);
+    Brufs::Directory new_parent(*root);
+
+    auto status = root->open_directory(ino_to_inode_id(old_parent_ino), old_parent);
+    if (status < Brufs::Status::OK) goto reply_status;
+
+    status = root->open_directory(ino_to_inode_id(new_parent_ino), new_parent);
+    if (status < Brufs::Status::OK) goto reply_status;
+
+    Brufs::DirectoryEntry new_entry;
+    status = new_parent.look_up(new_name, new_entry);
+
+    new_already_exists = status == Brufs::Status::OK;
+    if (new_already_exists && (flags & RENAME_NOREPLACE)) {
+        fuse_reply_err(req, EEXIST);
+        return;
+    }
+
+    if (status != Brufs::Status::OK && status != Brufs::Status::E_NOT_FOUND) goto reply_status;
+
+    Brufs::DirectoryEntry old_entry;
+    if (flags & RENAME_EXCHANGE) {
+        status = old_parent.look_up(old_name, old_entry);
+    } else {
+        status = old_parent.remove(old_name, old_entry);
+    }
+
+    if (status < Brufs::Status::OK) goto reply_status;
+
+    std::swap(new_entry.inode_id, old_entry.inode_id);
+
+    if (new_already_exists) {
+        status = new_parent.update(new_entry);
+    } else {
+        new_entry.set_label(new_name);
+        status = new_parent.insert(new_entry);
+    }
+    if (status < Brufs::Status::OK) goto reply_status;
+
+    if (flags & RENAME_EXCHANGE) {
+        status = old_parent.update(old_entry);
+        if (status < Brufs::Status::OK) goto reply_status;
+    } else if (new_already_exists) {
+        auto hdr = root->create_inode_header();
+
+        status = root->find_inode(old_entry.inode_id, hdr);
+        if (status < Brufs::Status::OK) goto reply_status;
+
+        if (hdr->num_links > 0) --hdr->num_links;
+
+        status = root->update_inode(old_entry.inode_id, hdr);
+        if (status < Brufs::Status::OK) goto reply_status;
+
+        root->destroy_inode_header(hdr);
+    }
+
+    fuse_reply_err(req, 0);
+    return;
+
+reply_status:
+    fuse_reply_err(req, status_to_errno(status));
+    return;
+}
+
+static void on_rmdir(fuse_req_t req, fuse_ino_t parent_ino, const char *name) {
+    Brufuse::WriteLock lock;
+    auto root_handle = get_root_handle(req);
+    auto root = root_handle->root;
+
+    Brufs::Directory parent(*root);
+    Brufs::Directory dir(*root);
+
+    auto status = root->open_directory(ino_to_inode_id(parent_ino), parent);
+    if (status == Brufs::Status::E_WRONG_INODE_TYPE) goto reply_status;
+
+    Brufs::DirectoryEntry child_entry;
+    status = parent.look_up(name, child_entry);
+    if (status < Brufs::Status::OK) goto reply_status;
+
+    status = root->open_directory(child_entry.inode_id, dir);
+    if (status < Brufs::Status::OK) goto reply_status;
+
+    if (dir.count() > 2) { // Directories always contain . and ..
+        fuse_reply_err(req, ENOTEMPTY);
+        return;
+    }
+
+    parent.remove(child_entry);
+    if (status < Brufs::Status::OK) goto reply_status;
+
+    if (dir.get_header()->num_links > 0) --dir.get_header()->num_links;
+    status = dir.store();
+    if (status < Brufs::Status::OK) goto reply_status;
+
+    fuse_reply_err(req, 0);
+    return;
+
+reply_status:
+    fuse_reply_err(req, status_to_errno(status));
+    return;
+}
+
+void on_setattr(
+    fuse_req_t req, fuse_ino_t ino_num, struct stat *attr, int to_set, struct fuse_file_info *fi
+) {
+    Brufuse::WriteLock lock;
+    auto root_handle = get_root_handle(req);
+    auto root = root_handle->root;
+
+    Brufs::Inode *ino;
+    if (fi) {
+        ino = reinterpret_cast<Brufs::Inode *>(fi->fh);
+    } else {
+        ino = new Brufs::Inode(*root);
+        auto status = root->open_inode(ino_to_inode_id(ino_num), *ino);
+        if (status < Brufs::Status::OK) {
+            fuse_reply_err(req, status_to_errno(status));
+            return;
+        }
+    }
+
+    if (to_set & FUSE_SET_ATTR_MODE) {
+        ino->get_header()->mode = attr->st_mode & 0777;
+    }
+
+    if (to_set & FUSE_SET_ATTR_UID) {
+        ino->get_header()->owner = attr->st_uid;
+    }
+
+    if (to_set & FUSE_SET_ATTR_GID) {
+        ino->get_header()->group = attr->st_gid;
+    }
+
+    if (to_set & FUSE_SET_ATTR_SIZE && ino->get_inode_type() == Brufs::InodeType::FILE) {
+        auto file = static_cast<Brufs::File *>(ino);
+        auto status = file->truncate(attr->st_size);
+        if (status < Brufs::Status::OK) {
+            fuse_reply_err(req, status_to_errno(status));
+            return;
+        }
+    } else if (to_set & FUSE_SET_ATTR_SIZE) {
+        fuse_reply_err(req, EINVAL);
+        return;
+    }
+
+    if (to_set & FUSE_SET_ATTR_MTIME) {
+        ino->get_header()->last_modified.seconds = attr->st_mtim.tv_sec;
+        ino->get_header()->last_modified.nanoseconds = attr->st_mtim.tv_nsec;
+    }
+
+    if (to_set & FUSE_SET_ATTR_MTIME_NOW) {
+        ino->get_header()->last_modified = Brufs::Timestamp::now();
+    }
+
+    if (to_set & FUSE_SET_ATTR_CTIME) {
+        ino->get_header()->created.seconds = attr->st_ctim.tv_sec;
+        ino->get_header()->created.nanoseconds = attr->st_ctim.tv_nsec;
+    }
+
+    auto status = ino->store();
+    if (status < Brufs::Status::OK) {
+        fuse_reply_err(req, status_to_errno(status));
+        return;
+    }
+
+    struct stat new_attr;
+    inode_header_to_stat(ino_to_inode_id(ino_num), ino->get_header(), new_attr);
+
+    fuse_reply_attr(req, &new_attr, DEFAULT_ATTR_TIMEOUT);
+}
+
+void on_unlink(fuse_req_t req, fuse_ino_t parent_ino, const char *name) {
+    Brufuse::WriteLock lock;
+    auto root_handle = get_root_handle(req);
+    auto root = root_handle->root;
+
+    Brufs::Directory parent(*root);
+    Brufs::DirectoryEntry entry;
+    Brufs::Inode inode(*root);
+
+    auto status = root->open_directory(ino_to_inode_id(parent_ino), parent);
+    if (status < Brufs::Status::OK) goto reply_status;
+
+    status = parent.remove(name, entry);
+    if (status < Brufs::Status::OK) goto reply_status;
+
+    status = root->open_inode(entry.inode_id, inode);
+    if (status < Brufs::Status::OK) goto reply_status;
+
+    if (inode.get_header()->num_links > 0) --inode.get_header()->num_links;
+
+    status = inode.store();
+    if (status < Brufs::Status::OK) goto reply_status;
+
+    fuse_reply_err(req, 0);
+    return;
+
+reply_status:
+    fuse_reply_err(req, status_to_errno(status));
+    return;
+}
+
+static void on_write(
+    fuse_req_t req, fuse_ino_t ino,
+    const char *buf, size_t size, off_t off,
+    struct fuse_file_info *fi
+) {
+    (void) ino; // Known through fi->fh
+    Brufuse::WriteLock lock;
+
+    if (off < 0) {
+        fuse_reply_err(req, EINVAL);
+        return;
+    }
+
+    auto uoff = static_cast<Brufs::Offset>(off);
+
+    auto file = reinterpret_cast<Brufs::File *>(fi->fh);
+
+    Brufs::Status status;
+    size_t total = 0;
+    while (total < size) {
+        auto sstatus = file->write(buf + total, size - total, uoff + total);
+        if (sstatus < 0) {
+            status = static_cast<Brufs::Status>(sstatus);
+            goto reply_status;
+        }
+
+        total += sstatus;
+    }
+
+    fuse_reply_write(req, total);
+    return;
+
+reply_status:
+    fuse_reply_err(req, status_to_errno(status));
+    return;
+}
+
+void Brufuse::init_fs_ops() {
+    memset(&fs_ops, 0, sizeof(struct fuse_lowlevel_ops));
+
+    fs_ops.access = on_access;
+    fs_ops.getattr = on_getattr;
+    fs_ops.lookup = on_lookup;
+    fs_ops.mkdir = on_mkdir;
+    fs_ops.mknod = on_mknod;
+    fs_ops.open = on_open;
+    fs_ops.opendir = on_opendir;
+    fs_ops.read = on_read;
+    fs_ops.readdir = on_readdir;
+    fs_ops.release = on_release;
+    fs_ops.releasedir = on_releasedir;
+    fs_ops.rename = on_rename;
+    fs_ops.rmdir = on_rmdir;
+    fs_ops.setattr = on_setattr;
+    fs_ops.unlink = on_unlink;
+    fs_ops.write = on_write;
+}

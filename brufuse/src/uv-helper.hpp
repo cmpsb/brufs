@@ -20,35 +20,19 @@
  * SOFTWARE.
  */
 
-#include "message-io.hpp"
-#include "stop-request.hpp"
-#include "uv-helper.hpp"
+#pragma once
 
-static void on_response(uv_stream_t *stream, Brufuse::Message *res) {
-    auto status = res->get_status();
-    if (status != Brufuse::StatusCode::OK) {
-        fprintf(stderr, "Unable to stop the server: %hhu\n", status);
-    }
+#include <uv.h>
 
-    Brufuse::close_and_free(stream);
-    delete res;
+namespace Brufuse {
+
+static void free_handle_after_close(uv_handle_t *handle) {
+    delete handle;
 }
 
-static void on_message_sent(uv_write_t *wreq, int status) {
-    Brufuse::await_response(wreq, status, on_response);
+template <typename T>
+void close_and_free(T *handle) {
+    uv_close(reinterpret_cast<uv_handle_t *>(handle), free_handle_after_close);
 }
 
-int Brufuse::request_stop(uv_connect_t *req) {
-    auto stream = req->handle;
-    delete req;
-
-    auto msg = new Message;
-    msg->set_data_size(0);
-    msg->set_sequence(0);
-    msg->set_type(RequestType::STOP);
-    msg->set_status(StatusCode::OK);
-
-    Brufuse::write_message(stream, msg, on_message_sent);
-
-    return 0;
 }

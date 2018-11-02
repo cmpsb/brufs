@@ -82,6 +82,8 @@ public:
     Status update(const DirectoryEntry &entry);
 
     Status remove(const DirectoryEntry &entry);
+    Status remove(const char *name, DirectoryEntry &entry);
+    Status remove(const char *name);
 
     /**
      * Counts the entries in the directory.

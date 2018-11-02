@@ -22,11 +22,16 @@
 
 #include <ctime>
 
+#include "config.hpp"
 #include "Timestamp.hpp"
 
 Brufs::Timestamp Brufs::Timestamp::now() {
-    return {
-        static_cast<uint64_t>(::time(nullptr)),
-        0
-    };
+#ifdef BRUFS_NANOSECOND_TIMESTAMP
+    struct timespec tv;
+    clock_gettime(CLOCK_REALTIME, &tv);
+
+    return {tv.tv_sec, static_cast<uint64_t>(tv.tv_nsec)};
+#else
+    return {::time(nullptr), 0};
+#endif
 }

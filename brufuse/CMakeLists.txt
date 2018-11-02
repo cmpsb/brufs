@@ -7,6 +7,10 @@ set(SOURCE_FILES
     src/client/stop-request.cpp
     src/server/service.cpp
     src/server/request.cpp
+    src/server/mount-request.cpp
+    src/server/brufs.cpp
+    src/server/fuse-iface.cpp
+    src/server/FdAbst.cpp
     src/slopt/opt.c
 )
 
@@ -14,4 +18,4 @@ include_directories(${CMAKE_SOURCE_DIR}/libbrufs/include src)
 
 add_executable(brufuse ${SOURCE_FILES})
 
-target_link_libraries(brufuse brufs uv)
+target_link_libraries(brufuse brufs uv fuse3)

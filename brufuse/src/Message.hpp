@@ -26,8 +26,10 @@
 #include <cstring>
 #include <cassert>
 
+#include <stdexcept>
 #include <algorithm>
 #include <vector>
+#include <string>
 
 namespace Brufuse {
 
@@ -98,6 +100,16 @@ enum StatusCode : char {
     BAD_REQUEST,
 
     /**
+     * The requested entity (root, etc.) could not be found.
+     */
+    NOT_FOUND,
+
+    /**
+     * The root was already mounted.
+     */
+    ALREADY_MOUNTED,
+
+    /**
      * The program encountered an internal error.
      */
     INTERNAL_ERROR,
@@ -106,6 +118,10 @@ enum StatusCode : char {
      * Not an actual status code. Marks the end of the codes.
      */
     SC_END
+};
+
+class TruncatedMessageException : public std::runtime_error {
+    using std::runtime_error::runtime_error;
 };
 
 /**
@@ -127,6 +143,15 @@ private:
      * The number of data bytes currently present in the buffer.
      */
     size_t data_present = 0;
+
+    void assert_read_range(size_t idx, size_t size) const {
+        if (HEADER_SIZE + idx + size > this->message_size) {
+            throw TruncatedMessageException(
+                "Message truncated: " + std::to_string(HEADER_SIZE + idx) + " + "
+                + std::to_string(size) + " > " + std::to_string(this->message_size)
+            );
+        }
+    }
 
 public:
     static inline Message *create_reply(Message *req);
@@ -316,6 +341,90 @@ public:
      * @return the raw buffer
      */
     const unsigned char *get_buffer() const { return this->data.data(); }
+
+    /**
+     * Increases the data size, if the new size is larger than the current size.
+     *
+     * @param new_size the new size
+     */
+    void set_data_size_at_least(size_t new_size) {
+        if (HEADER_SIZE + new_size <= this->message_size) return;
+        this->set_data_size(new_size);
+    }
+
+    /**
+     * Writes an integer to the message.
+     *
+     * @param idx the index to start writing at, updated to the new position after writing
+     * @param value the value to write
+     */
+    template <typename T>
+    void write(size_t &idx, const T &value) {
+        this->set_data_size_at_least(idx + sizeof(T));
+
+        for (size_t i = 0; i < sizeof(T); ++i) {
+            this->data[HEADER_SIZE + idx + i] = static_cast<unsigned char>(
+                value >> ((sizeof(T) - i - 1) * 8)
+            );
+        }
+
+        idx += sizeof(T);
+    }
+
+    /**
+     * Writes a string to the message.
+     *
+     * @param idx the index to start writing at, updated to the new position after writing
+     * @param str the string to write
+     */
+    void write(size_t &idx, const std::string &str) {
+        const uint32_t size = str.size();
+        this->write(idx, size);
+
+        this->set_data_size_at_least(idx + size);
+
+        memcpy(this->data.data() + HEADER_SIZE + idx, str.data(), size);
+
+        idx += size;
+    }
+
+    /**
+     * Reads an integer from the message.
+     *
+     * @param idx the index to start reading from, updating to the new position after reading
+     * @param value where to store the value
+     */
+    template <typename T>
+    void read(size_t &idx, T &value) const {
+        this->assert_read_range(idx, sizeof(T));
+
+        value = 0;
+
+        for (size_t i= 0; i < sizeof(T); ++i) {
+            value <<= 8;
+            value |= this->data[HEADER_SIZE + idx + i];
+        }
+
+        idx += sizeof(T);
+    }
+
+    /**
+     * Reads a string from the message.
+     *
+     * @param idx the index to start reading from, updated to the new position after reading
+     * @param value where to store the string
+     */
+    void read(size_t &idx, std::string &str) const {
+        uint32_t size;
+        this->read(idx, size);
+
+        this->assert_read_range(idx, size);
+
+        str.resize(size);
+        memcpy(str.data(), this->data.data() + HEADER_SIZE + idx, size);
+
+        idx += size;
+    }
 };
 
 Message *Message::create_reply(Message *req) {

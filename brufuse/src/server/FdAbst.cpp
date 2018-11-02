@@ -1,4 +1,4 @@
-/*
+/*b+tree
  * Copyright (c) 2017-2018 Luc Everse <luc@cmpsb.net>
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -22,40 +22,39 @@
 
 #include <cstdio>
 #include <cassert>
+#include <cerrno>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
-#include "config.hpp"
-#include "Version.hpp"
+#include "FdAbst.hpp"
 
-int Brufs::Version::compare(const Version &other) const {
-    if (this->major == 0 && other.minor == 0 && other.major == 0 && other.minor == 0) {
-        return (this->patch == other.patch) ? 0 : -1000;
-    }
-
-    if (other.major == 0 && other.minor == 0) return -1000;
-
-    if (this->major > other.major) return 100;
-    if (this->major < other.major) return -100;
-
-    if (this->minor > other.minor) return 10;
-    if (this->minor < other.minor) return -10;
-
-    // Ignore patch differences
-    return 0;
+Brufuse::FdAbst::FdAbst(int file) : file(file) {
+    assert(file > 0);
 }
 
-int Brufs::Version::to_string(char *buf, size_t len) const {
-    return snprintf(buf, len, "%hhu.%hhu.%hu", this->major, this->minor, this->patch);
+Brufs::SSize Brufuse::FdAbst::read(void *buf, Brufs::Size count, Brufs::Address offset) const {
+    ssize_t status = pread(this->file, buf, count, offset);
+    if (status == -1) return Brufs::Status::E_ABSTIO_BASE + errno;
+
+    return status;
 }
 
-/**
- * Fills the given version structure with the library's version information.
- *
- * @param version the version struct to fill
- */
-Brufs::Version Brufs::Version::get() {
-    return {
-        BRUFS_VERSION_MAJOR,
-        BRUFS_VERSION_MINOR,
-        BRUFS_VERSION_PATCH
-    };
+Brufs::SSize Brufuse::FdAbst::write(const void *buf, Brufs::Size count, Brufs::Address offset) {
+    ssize_t status = pwrite(this->file, buf, count, offset);
+    if (status == -1) return Brufs::Status::E_ABSTIO_BASE + errno;
+
+    return status;
+}
+
+const char *Brufuse::FdAbst::strstatus(Brufs::SSize eno) const {
+    if (eno < Brufs::E_ABSTIO_BASE) return Brufs::strerror(static_cast<Brufs::Status>(eno));
+    return strerror(eno - Brufs::Status::E_ABSTIO_BASE);
+}
+
+Brufs::Size Brufuse::FdAbst::get_size() const {
+    struct stat st;
+    fstat(this->file, &st);
+
+    return static_cast<Brufs::Size>(st.st_size);
 }

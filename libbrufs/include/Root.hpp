@@ -61,13 +61,13 @@ class Root {
     friend InoTree;
 
 public:
-    Root(Brufs &fs, RootHeader &hdr);
+    Root(Brufs &fs, const RootHeader &hdr);
 
     const RootHeader &get_header() { return this->header; }
 
     Brufs &get_fs() { return this->fs; }
 
-    const RootHeader &get_header() const { 
+    const RootHeader &get_header() const {
         return this->header;
     }
 

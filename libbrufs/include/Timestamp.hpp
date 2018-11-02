@@ -32,7 +32,7 @@ namespace Brufs {
  * A timestamp supporting nanosecond precision.
  */
 struct Timestamp {
-    uint64_t seconds;
+    int64_t seconds;
     uint64_t nanoseconds;
 
     static Timestamp now();

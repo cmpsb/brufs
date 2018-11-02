@@ -56,6 +56,19 @@ static inline int read_message(uv_pipe_t *ppe, OnFullMessage cb) {
 }
 
 /**
+ * Reads a response following a write request.
+ *
+ * If the request was not successful, the read is not queued and an error is logged to stderr.
+ *
+ * This function frees the write request and sent message automatically.
+ *
+ * @param wreq the write request
+ * @param status the status code of the write request
+ * @param cb the function to call once the read is complete
+ */
+void await_response(uv_write_t *wreq, int status, OnFullMessage cb);
+
+/**
  * Writes a message out to the given stream.
  *
  * If an error occurs while writing, the stream will be closed and eventually freed.

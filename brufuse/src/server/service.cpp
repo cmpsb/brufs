@@ -43,10 +43,7 @@ static void close_handle(uv_handle_t *handle, void *pl) {
     if (!uv_is_closing(handle)) uv_close(handle, on_close_at_closing);
 }
 
-static void on_sigint(uv_signal_t *handle, int signum) {
-    (void) handle;
-    (void) signum;
-
+void Brufuse::stop_service() {
     int status = 0;
 
     uv_stop(&loop);
@@ -65,6 +62,13 @@ static void on_sigint(uv_signal_t *handle, int signum) {
     unlink(socket_path.c_str());
 
     exit(status >= 0);
+}
+
+static void on_sigint(uv_signal_t *handle, int signum) {
+    (void) handle;
+    (void) signum;
+
+    Brufuse::stop_service();
 }
 
 static void on_sighup(uv_signal_t *handle, int signum) {
@@ -101,11 +105,9 @@ int Brufuse::launch_service(
 ) {
     socket_path = sock_path;
 
-    int iofd = open(dev_path.c_str(), O_RDWR);
-    if (iofd == -1) {
-        fprintf(stderr, "Unable to open %s: %s\n", dev_path.c_str(), strerror(errno));
-        return 1;
-    }
+    // Initialize the file system and the FUSE interface
+    Brufuse::init_fs_ops();
+    Brufuse::open_fs(dev_path);
 
     auto status = uv_loop_init(&loop);
     if (status < 0) {

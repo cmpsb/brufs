@@ -21,14 +21,29 @@
  */
 
 #include "message-io.hpp"
+#include "uv-helper.hpp"
 
 struct MessageContainer {
     Brufuse::Message *message;
     Brufuse::OnFullMessage cb;
 };
 
-static void on_close(uv_handle_t *handle) {
-    delete handle;
+void Brufuse::await_response(uv_write_t *wreq, int status, OnFullMessage cb) {
+    auto stream = wreq->handle;
+    delete static_cast<Brufuse::Message *>(stream->data);
+
+    if (status >= 0) {
+        status = Brufuse::read_message(stream, cb);
+        if (status < 0) {
+            fprintf(stderr, "Unable to read the response: %s\n", uv_strerror(status));
+            close_and_free(stream);
+        }
+    } else {
+        fprintf(stderr, "Unable to write the message: %s\n", uv_strerror(status));
+        close_and_free(stream);
+    }
+
+    delete wreq;
 }
 
 int Brufuse::write_message(uv_stream_t *stream, Message *msg, OnMessageWritten cb) {
@@ -47,7 +62,7 @@ int Brufuse::write_message(uv_stream_t *stream, Message *msg, OnMessageWritten c
 
         delete whandle;
 
-        uv_close(reinterpret_cast<uv_handle_t *>(stream), on_close);
+        close_and_free(stream);
     }
 
     return status;
@@ -66,7 +81,7 @@ static void on_alloc(uv_handle_t *handle, size_t suggested_size, uv_buf_t *buf) 
 /**
  * Called by libuv as soon as some bytes have been read.
  */
-void on_read(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buf) {
+static void on_read(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buf) {
     auto ct = reinterpret_cast<MessageContainer *>(stream->data);
     auto req = ct->message;
 
@@ -77,7 +92,7 @@ void on_read(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buf) {
         }
 
         uv_read_stop(stream);
-        uv_close(reinterpret_cast<uv_handle_t *>(stream), on_close);
+        Brufuse::close_and_free(stream);
 
         delete[] buf->base;
         delete ct->message;
@@ -90,6 +105,9 @@ void on_read(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buf) {
     ssize_t i = 0;
 
     while (!req->is_size_read() && i < nread) req->add_next_size_byte(cbuf[i++]);
+    if (!req->is_size_read()) return;
+
+    req->set_data_size(req->get_data_size());
 
     auto is_full = req->fill(cbuf + i, nread - i);
     if (is_full) {

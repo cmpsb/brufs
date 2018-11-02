@@ -24,14 +24,57 @@
 
 #include <string>
 #include <vector>
+#include <map>
 
 #include <uv.h>
 
-#include "types.hpp"
+#define FUSE_USE_VERSION 31
+#include <fuse3/fuse_lowlevel.h>
 
+#include "libbrufs.hpp"
+
+#include "types.hpp"
 #include "Message.hpp"
+#include "FdAbst.hpp"
 
 namespace Brufuse {
+
+struct MountedRoot {
+    std::string mount_point;
+    Brufs::Root *root;
+    struct fuse_session *session;
+    uv_thread_t *thread;
+};
+
+extern fuse_lowlevel_ops fs_ops;
+
+extern Brufs::Brufs *fs;
+extern FdAbst *fs_io;
+extern uv_rwlock_t fs_rwlock;
+
+extern std::map<std::string, MountedRoot *> mounted_roots;
+
+class ReadLock {
+public:
+    ReadLock() {
+        uv_rwlock_rdlock(&fs_rwlock);
+    }
+
+    ~ReadLock() {
+        uv_rwlock_rdunlock(&fs_rwlock);
+    }
+};
+
+class WriteLock {
+public:
+    WriteLock() {
+        uv_rwlock_wrlock(&fs_rwlock);
+    }
+
+    ~WriteLock() {
+        uv_rwlock_wrunlock(&fs_rwlock);
+    }
+};
 
 int launch_service(
     const std::string &socket_path,
@@ -39,8 +82,13 @@ int launch_service(
     const std::string &dev_path
 );
 
+void stop_service() __attribute__((noreturn));
+
 void handle_connection(uv_pipe_t *client);
 
+void handle_mount_request(const Message &req, Message *res);
 
+void open_fs(const std::string &dev_path);
+void init_fs_ops();
 
 }

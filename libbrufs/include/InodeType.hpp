@@ -30,7 +30,6 @@ enum InodeType {
     NONE,
     FILE,
     DIRECTORY,
-    HARD_LINK,
     SOFT_LINK,
     LIST_END
 };

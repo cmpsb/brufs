@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2018 Luc Everse <luc@wukl.net>
+ * Copyright (c) 2017-2018 Luc Everse <luc@cmpsb.net>
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -20,35 +20,23 @@
  * SOFTWARE.
  */
 
-#include "message-io.hpp"
-#include "stop-request.hpp"
-#include "uv-helper.hpp"
+#pragma once
 
-static void on_response(uv_stream_t *stream, Brufuse::Message *res) {
-    auto status = res->get_status();
-    if (status != Brufuse::StatusCode::OK) {
-        fprintf(stderr, "Unable to stop the server: %hhu\n", status);
-    }
+#include "libbrufs.hpp"
 
-    Brufuse::close_and_free(stream);
-    delete res;
-}
+namespace Brufuse {
 
-static void on_message_sent(uv_write_t *wreq, int status) {
-    Brufuse::await_response(wreq, status, on_response);
-}
+class FdAbst : public Brufs::AbstIO {
+    int file;
 
-int Brufuse::request_stop(uv_connect_t *req) {
-    auto stream = req->handle;
-    delete req;
+public:
+    FdAbst(int file);
+    ~FdAbst() override {}
 
-    auto msg = new Message;
-    msg->set_data_size(0);
-    msg->set_sequence(0);
-    msg->set_type(RequestType::STOP);
-    msg->set_status(StatusCode::OK);
+    Brufs::SSize read(void *buf, Brufs::Size count, Brufs::Address offset) const override;
+    Brufs::SSize write(const void *buf, Brufs::Size count, Brufs::Address offset) override;
+    const char *strstatus(Brufs::SSize eno) const override;
+    Brufs::Size get_size() const override;
+};
 
-    Brufuse::write_message(stream, msg, on_message_sent);
-
-    return 0;
 }

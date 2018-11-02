@@ -22,6 +22,15 @@
 
 #include "Directory.hpp"
 
+namespace Brufs { namespace BmTree {
+
+template <>
+bool equiv_values(const DirectoryEntry *current, const DirectoryEntry *replacement) {
+    return strncmp(current->label, replacement->label, MAX_LABEL_LENGTH) == 0;
+}
+
+}}
+
 Brufs::Status Brufs::Directory::init(const InodeId &id, const InodeHeader *hdr) {
     Inode::init(id, hdr);
 
@@ -82,7 +91,24 @@ Brufs::Status Brufs::Directory::remove(const DirectoryEntry &entry) {
     FileEntryTree entries(*this);
 
     DirectoryEntry dummy;
-    return entries.remove(entry.hash(), dummy);
+    return entries.remove(entry.hash(), dummy, true);
+}
+
+Brufs::Status Brufs::Directory::remove(const char *name, DirectoryEntry &entry) {
+    FileEntryTree entries(*this);
+
+    entry.set_label(name);
+
+    return entries.remove(entry.hash(), entry, true);
+}
+
+Brufs::Status Brufs::Directory::remove(const char *name) {
+    FileEntryTree entries(*this);
+
+    DirectoryEntry lbl_entry;
+    lbl_entry.set_label(name);
+
+    return entries.remove(lbl_entry.hash(), lbl_entry);
 }
 
 Brufs::SSize Brufs::Directory::count() {

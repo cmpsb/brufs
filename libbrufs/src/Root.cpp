@@ -36,8 +36,8 @@ Brufs::Status Brufs::Root::store() {
     return this->fs.update_root(this->header);
 }
 
-Brufs::Root::Root(Brufs &fs, RootHeader &hdr) : 
-    fs(fs), header(hdr), 
+Brufs::Root::Root(Brufs &fs, const RootHeader &hdr) :
+    fs(fs), header(hdr),
     it(&fs, *this, &this->header.int_address, fs.get_header().cluster_size),
     ait(&fs, *this, &this->header.ait_address, fs.get_header().cluster_size)
 {

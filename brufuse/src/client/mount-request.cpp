@@ -27,12 +27,7 @@
 #include "Message.hpp"
 #include "message-io.hpp"
 #include "mount-request.hpp"
-
-static uv_loop_t loop;
-
-static void on_close(uv_handle_t *handle) {
-    delete handle;
-}
+#include "uv-helper.hpp"
 
 static void on_response(uv_stream_t *stream, Brufuse::Message *res) {
     printf("Response: length %lu; type %u; status %u\n",
@@ -41,38 +36,19 @@ static void on_response(uv_stream_t *stream, Brufuse::Message *res) {
         res->get_status()
     );
 
-    uv_close(reinterpret_cast<uv_handle_t *>(stream), on_close);
+    if (res->get_status() != Brufuse::StatusCode::OK) {
+        size_t ridx = 0;
+        std::string message;
+        res->read(ridx, message);
+        fprintf(stderr, "%s\n", message.c_str());
+    }
+
+    Brufuse::close_and_free(stream);
     delete res;
 }
 
 static void on_message_sent(uv_write_t *wreq, int status) {
-    auto stream = wreq->handle;
-    auto msg = static_cast<Brufuse::Message *>(stream->data);
-
-    if (status >= 0) {
-        status = Brufuse::read_message(stream, on_response);
-        if (status < 0) {
-            fprintf(stderr, "Unable to read the response: %s\n", uv_strerror(status));
-        }
-    } else {
-        fprintf(stderr, "Unable to write the message: %s\n", uv_strerror(status));
-    }
-
-    delete msg;
-    delete wreq;
-}
-
-static void on_connect(uv_connect_t *req) {
-    auto stream = req->handle;
-    delete req;
-
-    auto msg = new Brufuse::Message;
-    msg->set_data_size(0);
-    msg->set_sequence(0);
-    msg->set_type(Brufuse::RequestType::NONE);
-    msg->set_status(Brufuse::StatusCode::OK);
-
-    Brufuse::write_message(stream, msg, on_message_sent);
+    Brufuse::await_response(wreq, status, on_response);
 }
 
 int Brufuse::request_mount(
@@ -81,6 +57,26 @@ int Brufuse::request_mount(
     const std::string &mount_point,
     const std::vector<std::string> &fuse_args
 ) {
-    on_connect(req);
-    return 1;
+    auto stream = req->handle;
+    delete req;
+
+    auto msg = new Brufuse::Message;
+    msg->set_data_size(0);
+    msg->set_sequence(0);
+    msg->set_type(Brufuse::RequestType::MOUNT);
+    msg->set_status(Brufuse::StatusCode::OK);
+
+    size_t idx = 0;
+    msg->write(idx, root_name);
+    msg->write(idx, mount_point);
+
+    uint32_t num_fuse_args = fuse_args.size();
+    msg->write(idx, num_fuse_args);
+    for (uint32_t i = 0; i < num_fuse_args; ++i) {
+        msg->write(idx, fuse_args[i]);
+    }
+
+    Brufuse::write_message(stream, msg, on_message_sent);
+
+    return 0;
 }

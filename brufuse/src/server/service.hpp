@@ -44,6 +44,7 @@ struct MountedRoot {
     Brufs::Root *root;
     struct fuse_session *session;
     uv_thread_t *thread;
+    std::map<Brufs::InodeId, Brufs::Inode *> open_inodes;
 };
 
 extern fuse_lowlevel_ops fs_ops;

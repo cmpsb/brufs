@@ -82,8 +82,9 @@ Brufs::Status Brufs::File::resize_big_to_small(UNUSED const Size old_size, const
 }
 
 Brufs::Status Brufs::File::resize_small_to_big(const Size old_size, const Size new_size) {
-    Vector<uint8_t> buf(old_size);
+    Vector<uint8_t> buf(BLOCK_SIZE);
     memcpy(buf.data(), this->get_data(), old_size);
+    memset(buf.data() + old_size, 0, BLOCK_SIZE - old_size);
 
     InodeExtentTree iet(*this);
     auto status = iet.init();
@@ -95,7 +96,7 @@ Brufs::Status Brufs::File::resize_small_to_big(const Size old_size, const Size n
     status = fs.allocate_blocks(BLOCK_SIZE, block_extent);
     if (status < Status::OK) return status;
 
-    auto sstatus = dwrite(fs.get_disk(), buf.data(), old_size, block_extent.offset);
+    auto sstatus = dwrite(fs.get_disk(), buf.data(), BLOCK_SIZE, block_extent.offset);
     if (sstatus < Status::OK) return static_cast<Status>(sstatus);
 
     this->set_size(new_size);
@@ -157,7 +158,7 @@ Brufs::SSize Brufs::File::write(const void *buf, Size count, Offset offset) {
 
         return count;
     }
-    
+
     InodeExtentTree iet(*this);
 
     auto fs = this->get_root().get_fs();
@@ -210,7 +211,7 @@ Brufs::SSize Brufs::File::write(const void *buf, Size count, Offset offset) {
     const auto aligned_end = next_multiple_of<Offset>(offset + count, cluster_size);
     const auto aligned_offset = previous_multiple_of<Offset>(offset, cluster_size);
     const auto aligned_length = min<Size>(aligned_end - aligned_offset, max_extent_length);
- 
+
     Extent raw_new_extent;
     status = fs.allocate_blocks(aligned_length, raw_new_extent);
     if (status < Status::OK) return status;

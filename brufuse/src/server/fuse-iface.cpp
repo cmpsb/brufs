@@ -196,8 +196,6 @@ static int get_attr(fuse_req_t req, Brufs::InodeId inode_id, struct stat &attr) 
 static void on_getattr(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi) {
     (void) fi; // "for future use, currently always NULL"
 
-    fprintf(stderr, "getattr %lu\n", ino);
-
     struct stat attr;
     int status = get_attr(req, ino_to_inode_id(ino), attr);
     if (status < 0) {
@@ -209,8 +207,6 @@ static void on_getattr(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi
 }
 
 static void on_lookup(fuse_req_t req, fuse_ino_t parent, const char *name) {
-    fprintf(stderr, "lookup %lu -> %s\n", parent, name);
-
     Brufuse::ReadLock lock;
     auto root_handle = get_root_handle(req);
     auto root = root_handle->root;
@@ -254,8 +250,6 @@ static void on_mkdir(fuse_req_t req, fuse_ino_t parent, const char *name, mode_t
     auto root = root_handle->root;
     auto parent_inode_id = ino_to_inode_id(parent);
 
-    fprintf(stderr, "mkdir: open %lu\n", parent);
-
     Brufs::Directory dir(*root);
     auto status = root->open_directory(parent_inode_id, dir);
     if (status < Brufs::Status::OK) {
@@ -284,12 +278,8 @@ static void on_mkdir(fuse_req_t req, fuse_ino_t parent, const char *name, mode_t
 
     auto new_inode_id = ino_to_inode_id(dist(mt));
 
-    fprintf(stderr, "mkdir: insert_inode\n");
-
     status = root->insert_inode(new_inode_id, new_dir);
     if (status < Brufs::Status::OK) goto reply_status;
-
-    fprintf(stderr, "mkdir: init\n");
 
     status = new_dir.init(new_inode_id, rdh);
     if (status < Brufs::Status::OK) goto reply_status;
@@ -298,20 +288,14 @@ static void on_mkdir(fuse_req_t req, fuse_ino_t parent, const char *name, mode_t
     entry.set_label(name);
     entry.inode_id = new_inode_id;
 
-    fprintf(stderr, "mkdir: insert in parent\n");
-
     status = dir.insert(entry);
     if (status < Brufs::Status::OK) goto clean_on_error;
-
-    fprintf(stderr, "mkdir: insert .\n");
 
     Brufs::DirectoryEntry dot_entry;
     dot_entry.set_label(".");
     dot_entry.inode_id = new_inode_id;
     status = new_dir.insert(dot_entry);
     if (status < Brufs::Status::OK) goto clean_on_error;
-
-    fprintf(stderr, "mkdir: insert ..\n");
 
     Brufs::DirectoryEntry dot_dot_entry;
     dot_dot_entry.set_label("..");
@@ -438,7 +422,6 @@ static void on_open(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi) {
 }
 
 static void on_opendir(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi) {
-    fprintf(stderr, "opendir %lu\n", ino);
     Brufuse::ReadLock lock;
     auto root_handle = get_root_handle(req);
     auto root = root_handle->root;
@@ -505,7 +488,6 @@ static void on_readdir(
     Brufs::Vector<Brufs::DirectoryEntry> entries;
     auto status = dir->collect(entries);
     if (status < Brufs::Status::OK) {
-        fprintf(stderr, "readdir: collect %d\n", status);
         fuse_reply_err(req, status_to_errno(status));
         return;
     }

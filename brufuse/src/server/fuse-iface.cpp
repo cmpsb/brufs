@@ -22,6 +22,10 @@
 
 #include <cerrno>
 
+#include <random>
+
+#include "service.hpp"
+
 // Not yet in userspace, taken from kernel definitions
 #ifndef RENAME_NOREPLACE
 #  define RENAME_NOREPLACE (1 << 0)
@@ -34,10 +38,6 @@
 #ifndef RENAME_WHITEOUT
 #  define RENAME_WHITEOUT (1 << 2)
 #endif
-
-#include <random>
-
-#include "service.hpp"
 
 static constexpr double DEFAULT_ATTR_TIMEOUT = 1;
 

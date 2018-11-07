@@ -83,7 +83,7 @@ enum Status {
     E_NO_SPACE,
 
     /**
-     * There is enough space, but the filesystem is too fragmented.
+     * Not enough space left on device, or the filesystem is too fragmented to fit the extent.
      */
     E_WONT_FIT,
 

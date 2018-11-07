@@ -1,6 +1,7 @@
 set(SOURCE_FILES
     src/main.cpp
     src/message-io.cpp
+    src/Util.cpp
     src/client/client.cpp
     src/client/mount-request.cpp
     src/client/status-request.cpp

@@ -30,7 +30,15 @@ std::map<std::string, Brufuse::MountedRoot *> Brufuse::mounted_roots;
 
 static void run_root_thread(void *pl) {
     auto mounted_root = static_cast<Brufuse::MountedRoot *>(pl);
-    fuse_session_loop(mounted_root->session);
+    fuse_session_loop_mt_31(mounted_root->session, true);
+    fuse_session_unmount(mounted_root->session);
+    fuse_session_destroy(mounted_root->session);
+
+    Brufuse::mounted_roots.erase(mounted_root->root_name);
+
+    delete mounted_root->root;
+    delete mounted_root->thread;
+    delete mounted_root;
 }
 
 void Brufuse::handle_mount_request(const Message &req, Message *res) {
@@ -96,6 +104,7 @@ void Brufuse::handle_mount_request(const Message &req, Message *res) {
 
     // Create the mounted root handle
     auto mounted_root = new MountedRoot;
+    mounted_root->root_name = root_name;
     mounted_root->mount_point = mount_point;
     mounted_root->root = new Brufs::Root(*fs, root_header);
 

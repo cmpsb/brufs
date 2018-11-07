@@ -69,8 +69,8 @@ public:
         return *this;
     }
 
-    Status init(const InodeId &id, const InodeHeader *hdr);
-    Status destroy();
+    Status init(const InodeId &id, const InodeHeader *hdr) override;
+    Status destroy() override;
 
     /**
      * Looks up a directory entry by name.

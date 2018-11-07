@@ -45,13 +45,17 @@ public:
     Inode(Root &root);
     Inode(Root &root, const InodeId id, const InodeHeader *header);
     Inode(const Inode &other);
-    ~Inode();
+    virtual ~Inode();
 
     Inode &operator=(const Inode &other);
 
-    Status init(const InodeId id, const InodeHeader *header);
-    Status store();
-    Status destroy() { return Status::OK; }
+    virtual Status init(const InodeId &id, const InodeHeader *header);
+    virtual Status store();
+    virtual Status destroy() { return Status::OK; }
+
+    InodeId get_id() const {
+        return this->id;
+    }
 
     InodeType get_inode_type() const {
         return static_cast<InodeType>(this->header->type);

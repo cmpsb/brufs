@@ -63,7 +63,7 @@ public:
         return *this;
     }
 
-    Status destroy();
+    Status destroy() override;
 
     Status truncate(Size length);
     Status empty();
@@ -80,10 +80,10 @@ public:
     }
 };
 
-inline InodeExtentTree::InodeExtentTree(File &file) : 
+inline InodeExtentTree::InodeExtentTree(File &file) :
     BmTree::BmTree(
-        &file.get_root().get_fs(), 
-        file.iet_address(), 
+        &file.get_root().get_fs(),
+        file.iet_address(),
         file.get_root().get_fs().get_header().cluster_size
     ),
     file(file)

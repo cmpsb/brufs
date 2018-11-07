@@ -39,12 +39,36 @@
 
 namespace Brufuse {
 
+struct OpenedInode {
+    Brufs::Inode *inode;
+
+    uint64_t open_count;
+};
+
 struct MountedRoot {
     std::string mount_point;
+    std::string root_name;
     Brufs::Root *root;
     struct fuse_session *session;
     uv_thread_t *thread;
-    std::map<Brufs::InodeId, Brufs::Inode *> open_inodes;
+    std::map<Brufs::InodeId, OpenedInode> open_inodes;
+
+    Brufs::Status open_inode(const Brufs::InodeId &id, Brufs::Inode &ino, bool store = true);
+    Brufs::Status get_inode(const Brufs::InodeId &id, Brufs::Inode &ino);
+    Brufs::Status open_typed_inode(
+        const Brufs::InodeId &id, Brufs::Inode &ino,
+        Brufs::InodeType expected_type, bool store = true
+    );
+
+    Brufs::Status open_file(const Brufs::InodeId &id, Brufs::File &ino, bool store = true);
+    Brufs::Status get_file(const Brufs::InodeId &id, Brufs::File &ino);
+
+    Brufs::Status open_directory(
+        const Brufs::InodeId &id, Brufs::Directory &ino, bool store = true
+    );
+    Brufs::Status get_directory(const Brufs::InodeId &id, Brufs::Directory &ino);
+
+    void update_inode(const Brufs::Inode &other);
 };
 
 extern fuse_lowlevel_ops fs_ops;

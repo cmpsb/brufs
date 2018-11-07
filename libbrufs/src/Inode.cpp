@@ -60,7 +60,7 @@ Brufs::Inode &Brufs::Inode::operator=(const Inode &other)  {
     return *this;
 }
 
-Brufs::Status Brufs::Inode::init(const InodeId id, const InodeHeader *header) {
+Brufs::Status Brufs::Inode::init(const InodeId &id, const InodeHeader *header) {
     this->id = id;
     memcpy(this->header, header, root.get_header().inode_size);
 

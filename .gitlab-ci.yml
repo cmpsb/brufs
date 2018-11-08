@@ -1,0 +1,38 @@
+# Until the runner stops trying to connect over HTTP this won't work:
+# image: twoflower.wukl.net:443/brutality/brufs-ci
+image: debian:sid-slim
+
+before_script:
+  - apt update
+  - apt install -y gcc g++ cmake libfuse3-dev libuv1-dev
+
+stages:
+  - test
+
+test-debug:
+  stage: test
+  except:
+    - schedules
+  script:
+    - mkdir build
+    - cd build
+    - cmake .. -DCMAKE_BUILD_TYPE=Debug
+    - make
+    - libbrufs/test_all
+
+test-release:
+  stage: test
+  only:
+    - schedules
+  script:
+    - mkdir build
+    - cd build
+    - cmake .. -DCMAKE_BUILD_TYPE=Release
+    - make
+    - libbrufs/test_all
+
+clean:
+  when: manual
+  script:
+    - cd build
+    - make clean

@@ -165,8 +165,13 @@ Brufs::Status Brufs::Brufs::init(Header &protoheader) {
  */
 
 Brufs::Status Brufs::Brufs::allocate_blocks(Size length, Extent &target) {
+    if (length != BLOCK_SIZE && (length % this->hdr->cluster_size != 0)) {
+        return Status::E_MISALIGNED;
+    }
+
     Extent result;
     Status status = this->fbt.remove(length, result);
+    if (status == Status::E_NOT_FOUND) return Status::E_WONT_FIT;
     if (status < 0) return status;
 
     target = {result.offset, length};

@@ -27,7 +27,7 @@
 namespace Brufuse {
 
 static void free_handle_after_close(uv_handle_t *handle) {
-    delete handle;
+    delete reinterpret_cast<uv_pipe_t *>(handle);
 }
 
 template <typename T>

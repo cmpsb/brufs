@@ -30,9 +30,3 @@ test-release:
     - cmake .. -DCMAKE_BUILD_TYPE=Release
     - make
     - libbrufs/test_all
-
-clean:
-  when: manual
-  script:
-    - cd build
-    - make clean

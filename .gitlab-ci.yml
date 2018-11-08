@@ -16,7 +16,7 @@ test-debug:
   script:
     - mkdir build
     - cd build
-    - cmake .. -DCMAKE_BUILD_TYPE=Debug
+    - cmake .. -DCMAKE_BUILD_TYPE=Debug -DBRUFS_SANITIZE=OFF
     - make
     - libbrufs/test_all
 

@@ -4,7 +4,14 @@ cmake_policy(SET CMP0048 NEW)
 project(brufs LANGUAGES C CXX VERSION 0.0.1)
 set(CMAKE_CXX_STANDARD 17)
 
-set(CMAKE_CXX_FLAGS "-g -Og -Wall -Wextra -pedantic -flto -fuse-linker-plugin")
+set(CMAKE_CXX_FLAGS "-Wall -Wextra -pedantic -march=haswell -mtune=native")
+
+if ("${CMAKE_BUILD_TYPE}" STREQUAL "Release")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2 -flto -fuse-linker-plugin -DNDEBUG")
+else ()
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -D_FORTIFY_SOURCE=1 -fsanitize=address,undefined")
+    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -fsanitize=address,undefined")
+endif()
 
 set(BRUFS_VERSION_MAJOR ${PROJECT_VERSION_MAJOR})
 set(BRUFS_VERSION_MINOR ${PROJECT_VERSION_MINOR})

@@ -41,6 +41,13 @@ TEST_CASE("Bm+trees can be inserted into and queried", "[btree]") {
         REQUIRE(count == 1);
     }
 
+    SECTION("can't insert when colliding") {
+        REQUIRE(tree.insert(0, 0L, true) == Brufs::Status::OK);
+        REQUIRE(tree.insert(1, 1L, true) == Brufs::Status::OK);
+        REQUIRE(tree.insert(2, 2L, true) == Brufs::Status::OK);
+        REQUIRE(tree.insert(1, 2L, true) == Brufs::Status::E_EXISTS);
+    }
+
     SECTION("can insert and then query again") {
         const long key = 1122;
         const long init_value = 3344;

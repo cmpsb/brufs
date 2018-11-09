@@ -517,7 +517,7 @@ Status Node<K, V>::insert(const K &key, const V *value, bool collide) {
         return subtree.insert(key, value, collide);
     }
 
-    return this->insert_direct<V>(key, value);
+    return this->insert_direct<V>(key, value, collide);
 }
 
 template <typename K, typename V>

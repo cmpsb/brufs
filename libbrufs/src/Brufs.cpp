@@ -82,7 +82,7 @@ Brufs::Brufs::Brufs(Disk *dsk) :
 }
 
 Brufs::Brufs::~Brufs() {
-    // free(this->raw_header);
+    free(this->raw_header);
 }
 
 Brufs::Status Brufs::Brufs::store_header() {

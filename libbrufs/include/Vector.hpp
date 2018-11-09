@@ -160,6 +160,10 @@ public:
 
         return false;
     }
+
+    bool empty() const {
+        return this->size == 0;
+    }
 };
 
 }

@@ -22,6 +22,7 @@ set(TEST_FILES
     test/btree-remove.cpp
     test/btree-update.cpp
     test/String.cpp
+    test/BuildInfo.cpp
 )
 
 configure_file(cmake/config.hpp.in config.hpp)

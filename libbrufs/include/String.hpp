@@ -131,7 +131,7 @@ public:
     }
 
     bool operator==(const String &other) const {
-        if (this->size() != other.get_size()) return false;
+        if (this->size() != other.size()) return false;
 
         return memcmp(this->c_str(), other.c_str(), this->size()) == 0;
     }

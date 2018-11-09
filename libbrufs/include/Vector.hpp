@@ -22,6 +22,8 @@
 
 #pragma once
 
+#include "types.hpp"
+
 namespace Brufs {
 
 template <typename T>

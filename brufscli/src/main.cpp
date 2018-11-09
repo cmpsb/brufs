@@ -32,9 +32,10 @@ int mkdir(int, char **);
 int touch(int, char **);
 int copy_in(int, char **);
 int copy_out(int, char **);
+int version();
 
 static void print_usage(const char *pname) {
-    fprintf(stderr, 
+    fprintf(stderr,
         "USAGE: %s ACTION ARGUMENTS...\n"
         "Actions:\n"
         "init . . . : format a disk\n"
@@ -70,6 +71,8 @@ int main(int argc, char **argv) {
         return copy_in(argc - 1, argv + 1);
     } else if (action == "copy-out" || action == "cat") {
         return copy_out(argc - 1, argv + 1);
+    } else if (action == "version") {
+        return version();
     // } else if (action == "help") {
     //     return help(argc - 1, argv + 1);
     }

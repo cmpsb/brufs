@@ -33,7 +33,7 @@ private:
 
 public:
     Vector(const unsigned int capacity = 8) : size(0), capacity(capacity), ptr(new T[capacity]) {}
-    Vector(const Vector<T> &other) : 
+    Vector(const Vector<T> &other) :
         size(other.size), capacity(other.capacity), ptr(new T[other.capacity])
     {
         for (Size i = 0; i < this->size; ++i) {
@@ -45,7 +45,7 @@ public:
         delete[] this->ptr;
     }
 
-    Vector &operator=(const Vector &other) {
+    Vector<T> &operator=(const Vector<T> &other) {
         this->size = other.size;
         this->capacity = other.capacity;
 
@@ -118,10 +118,9 @@ public:
     void reserve(const Size req_cap) {
         if (req_cap < this->capacity) return;
 
-        Size new_cap = this->capacity;
-        while (new_cap < req_cap) new_cap *= 1.4;
+        while (this->capacity < req_cap) this->capacity *= 1.4;
 
-        auto new_ptr = new T[new_cap];
+        auto new_ptr = new T[this->capacity];
 
         for (Size i = 0; i < this->size; ++i) {
             new_ptr[i] = this->ptr[i];
@@ -151,6 +150,14 @@ public:
     void clear() {
         while (this->size != 0) this->pop_back();
     }
-};  
+
+    bool contains(const T &value) const {
+        for (Size i = 0; i < this->size; ++i) {
+            if (this->ptr[i] == value) return true;
+        }
+
+        return false;
+    }
+};
 
 }

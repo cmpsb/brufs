@@ -11,6 +11,7 @@ set(SOURCE_FILES
     src/Directory.cpp
     src/Inode.cpp
     src/Timestamp.cpp
+    src/BuildInfo.cpp
 )
 
 set(TEST_FILES

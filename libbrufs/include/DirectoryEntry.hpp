@@ -32,18 +32,18 @@
 
 namespace Brufs {
 
-static const Size MAX_LABEL_LENGTH = 256;
+static constexpr Size MAX_LABEL_LENGTH = 256;
 
 /**
  * A directory entry
- * 
- * Entries are variable in size, due to the 
- * 
+ *
+ * Entries are variable in size, due to the
+ *
  */
 struct DirectoryEntry {
     /**
      * The name of the entry
-     * 
+     *
      * At most MAX_LABEL_LENGTH characters long, with a NUL terminator if it's shorter than that.
      */
     char label[MAX_LABEL_LENGTH];
@@ -55,13 +55,10 @@ struct DirectoryEntry {
     }
 
     String get_label() const {
-        String str;
+        char fit_label[MAX_LABEL_LENGTH + 1];
+        strncpy(fit_label, this->label, MAX_LABEL_LENGTH);
 
-        str.reserve(MAX_LABEL_LENGTH + 1);
-        strncpy(str, this->label, MAX_LABEL_LENGTH);
-        str.fit();
-
-        return str;
+        return fit_label;
     }
 
     Hash hash(const Hash seed = 14616742) const {

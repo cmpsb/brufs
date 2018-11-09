@@ -28,16 +28,16 @@
 
 namespace Brufs {
 
-class String : public Vector<char> {
+class String : private Vector<char> {
 private:
     void terminate() {
-        this->back() = 0;
+        Vector::back() = 0;
     }
 
 public:
     static constexpr Offset npos = -1;
 
-    String() {}
+    String() : String("") {}
 
     String(const char *str) : String(str, strlen(str)) {}
 
@@ -49,10 +49,9 @@ public:
 
     String(const String &other) : Vector(other) {}
 
-    String &operator=(const String &other) {
-        Vector::operator=(other);
-        return *this;
-    }
+    using Vector::operator=;
+    using Vector::operator[];
+    using Vector::front;
 
     const char *c_str() const {
         return this->data();
@@ -66,11 +65,19 @@ public:
         return this->data();
     }
 
+    const char &back() const {
+        return this->c_str()[this->get_size() - 1];
+    }
+
+    char &back() {
+        return this->data()[this->get_size() - 1];
+    }
+
     Size get_size() const {
         return Vector::get_size() - 1;
     }
 
-    String operator+(const String &other) {
+    String operator+(const String &other) const {
         String copy(*this);
 
         copy.resize(this->get_size() + other.get_size() + 1);
@@ -84,8 +91,8 @@ public:
         return this->get_size() == 0;
     }
 
-    Offset find(char ch) const {
-        auto ptr = strchr(this->c_str(), ch);
+    Offset find(char ch, Offset pos = 0) const {
+        auto ptr = strchr(this->c_str() + pos, ch);
         if (ptr == nullptr) return npos;
 
         return static_cast<Offset>(ptr - this->c_str());
@@ -102,6 +109,31 @@ public:
         substring.terminate();
 
         return substring;
+    }
+
+    Vector<String> split(const char splch) const {
+        Vector<String> portions;
+
+        Offset start = 0;
+
+        for (;;) {
+            auto choff = this->find(splch, start);
+            if (choff == npos) {
+                portions.push_back(this->substr(start));
+                break;
+            }
+
+            portions.push_back(this->substr(start, choff - start));
+            start = choff + 1;
+        }
+
+        return portions;
+    }
+
+    bool operator==(const String &other) const {
+        if (this->get_size() != other.get_size()) return false;
+
+        return memcmp(this->c_str(), other.c_str(), this->get_size()) == 0;
     }
 
     void fit() {

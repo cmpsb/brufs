@@ -23,6 +23,12 @@ function(extract_git_info)
         OUTPUT_VARIABLE GIT_RAW_BRANCH
     )
 
+    execute_process(
+        COMMAND git diff-index --quiet HEAD
+        WORKING_DIRECTORY "${ARG_WORKING_DIRECTORY}"
+        RESULT_VARIABLE GIT_INDEX_STATUS
+    )
+
     if ((${GIT_DESCRIBE_STATUS} EQUAL 0))
         string(REGEX REPLACE "\n$" "" GIT_TAG "${GIT_RAW_TAG}")
         set(GIT_TAG "${GIT_TAG}" PARENT_SCOPE)
@@ -51,5 +57,9 @@ function(extract_git_info)
         set(GIT_BRANCH "${GIT_BRANCH}" PARENT_SCOPE)
     else ()
         message(WARNING "Unable to extract the current git branch")
+    endif ()
+
+    if (NOT (${GIT_INDEX_STATUS} EQUAL 0))
+        set(GIT_DIRTY_TREE ON PARENT_SCOPE)
     endif ()
 endfunction()

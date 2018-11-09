@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2018 Luc Everse <luc@cmpsb.net>
+ * Copyright (c) 2017-2018 Luc Everse <luc@wukl.net>
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -20,11 +20,22 @@
  * SOFTWARE.
  */
 
-#pragma once
-
-#include "Brufs.hpp"
-#include "Directory.hpp"
-#include "File.hpp"
-#include "String.hpp"
-#include "Seed.hpp"
+#include "config.hpp"
 #include "BuildInfo.hpp"
+
+Brufs::BuildInfo Brufs::BuildInfo::get() {
+    Brufs::BuildInfo info;
+
+    info.version = Version::get();
+
+    String flags_str = BRUFS_FLAGS;
+    info.flags = flags_str.split(';');
+
+    info.build_date = BRUFS_BUILD_DATE;
+
+    info.git_tag = BRUFS_GIT_TAG;
+    info.git_branch = BRUFS_GIT_BRANCH;
+    info.git_commit = BRUFS_GIT_COMMIT;
+
+    return info;
+}

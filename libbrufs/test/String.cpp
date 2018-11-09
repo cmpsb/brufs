@@ -112,4 +112,15 @@ TEST_CASE("Strings", "[standalone]") {
 
         CHECK(etaoin + shrdlu == Brufs::String("thingtester"));
     }
+
+    SECTION("Can split by a character") {
+        const Brufs::String directions_str = "north;east;south;west";
+        const auto directions = directions_str.split(';');
+
+        CHECK(directions.get_size() == 4);
+        CHECK(directions[0] == "north");
+        CHECK(directions[1] == "east");
+        CHECK(directions[2] == "south");
+        CHECK(directions[3] == "west");
+    }
 }

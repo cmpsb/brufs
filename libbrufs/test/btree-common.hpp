@@ -73,7 +73,7 @@ static Brufs::Status allocate_test_page(Brufs::Brufs &fs, Brufs::Size size, Bruf
 
     if (free_pages.empty()) return Brufs::Status::E_NO_SPACE;
 
-    assert(size == PAGE_SIZE);
+    CHECK(size == PAGE_SIZE);
 
     target.offset = free_pages.top();
     target.length = size;

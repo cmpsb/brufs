@@ -107,4 +107,53 @@ TEST_CASE("Bm+trees can be inserted into and queried", "[btree]") {
         REQUIRE(tree.count_values(count) == Brufs::Status::OK);
         REQUIRE(count == 24);
     }
+
+    SECTION("Can count used space") {
+        Brufs::Size size;
+        REQUIRE(tree.count_used_space(size) == Brufs::Status::OK);
+
+        CHECK(size == PAGE_SIZE);
+    }
+
+    SECTION("can query the first value") {
+        REQUIRE(tree.insert(15, 99) == Brufs::Status::OK);
+        REQUIRE(tree.insert(25, 9) == Brufs::Status::OK);
+        REQUIRE(tree.insert(2, 999) == Brufs::Status::OK);
+
+        long first;
+        REQUIRE(tree.get_first(first) == Brufs::Status::OK);
+        REQUIRE(first == 999);
+    }
+
+    SECTION("can query the last value") {
+        REQUIRE(tree.insert(15, 9) == Brufs::Status::OK);
+        REQUIRE(tree.insert(25, 99) == Brufs::Status::OK);
+        REQUIRE(tree.insert(2, 999) == Brufs::Status::OK);
+
+        long last;
+        REQUIRE(tree.get_last(last) == Brufs::Status::OK);
+        REQUIRE(last == 99);
+    }
+
+    SECTION("can destroy the tree") {
+        REQUIRE(tree.destroy() == Brufs::Status::OK);
+
+        // The first page is reserved, like nullptr is
+        REQUIRE(free_pages.size() + 1 == DISK_SIZE / PAGE_SIZE);
+    }
+
+    SECTION("can walk the tree") {
+        unsigned long total = 0;
+        for (int i = 0; i < 1000; total += (i % 9), ++i) {
+            REQUIRE(tree.insert(i, i % 9) == Brufs::Status::OK);
+        }
+
+        unsigned long walked_total = 0;
+        REQUIRE(tree.walk<unsigned long *>([](long &v, unsigned long *p) {
+            *p += v;
+            return Brufs::Status::OK;
+        }, &walked_total) == Brufs::Status::OK);
+
+        CHECK(total == walked_total);
+    }
 }

@@ -193,6 +193,8 @@ Status BmTree<K, V>::count_used_space(Size &size) {
     auto status = this->root.load();
     if (status < Status::OK) return status;
 
+    size = 0;
+
     return this->root.count_used_space(size);
 }
 

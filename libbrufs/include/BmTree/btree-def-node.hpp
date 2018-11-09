@@ -830,7 +830,7 @@ Status Node<K, V>::get_last_leaf(Address &target) {
 template <typename K, typename V>
 template <typename P>
 Status Node<K, V>::destroy(EntryConsumer<V, P> destroyer, P &pl) {
-    auto status = this->fs->free_blocks({this->addr, this->length});
+    auto status = this->container->free({this->addr, this->length});
     if (status < Status::OK) return status;
 
     if (this->hdr->level > 0) {

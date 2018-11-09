@@ -137,6 +137,10 @@ public:
         return memcmp(this->c_str(), other.c_str(), this->size()) == 0;
     }
 
+    bool operator==(const char *str) const {
+        return *this == String(str);
+    }
+
     bool operator!=(const String &other) const {
         return !(*this == other);
     }

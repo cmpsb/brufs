@@ -414,7 +414,7 @@ struct Node {
      *
      * @return E_NOT_FOUND if no match could be found, OK otherwise
      */
-    Status locate(const K &key, unsigned int &result);
+    void locate(const K &key, unsigned int &result);
 
     /**
      * Finds the index of the best match for the search key.

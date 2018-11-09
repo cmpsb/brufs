@@ -18,7 +18,7 @@ TEST_CASE("Bm+trees can be queried by range or collisions", "[btree][htree]") {
         const int max_values = 10000;
 
         for (long i = 0; i < max_values; ++i) {
-            tree.insert(i, i + 10);
+            REQUIRE(tree.insert(i, i + 10) == Brufs::Status::OK);
         }
 
         const int expected_num = max_values / 2;
@@ -37,7 +37,7 @@ TEST_CASE("Bm+trees can be queried by range or collisions", "[btree][htree]") {
         const int max_values = 10000;
 
         for (long i = 0; i < max_values; ++i) {
-            tree.insert(i / 10, i);
+            REQUIRE(tree.insert(i / 10, i) == Brufs::Status::OK);
         }
 
         const int expected_num = 10;

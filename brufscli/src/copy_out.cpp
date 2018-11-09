@@ -140,8 +140,8 @@ int copy_out(int argc, char **argv) {
         return 1;
     }
 
-    auto hdr = root.create_inode_header();
-    status = root.find_inode(entry.inode_id, hdr);
+    Brufs::File file(root);
+    status = root.open_inode(entry.inode_id, file);
     if (status < Brufs::Status::OK) {
         fprintf(stderr, "Unable to open %s for writing: %s\n",
             local_path.c_str(), io.strstatus(status)
@@ -149,10 +149,6 @@ int copy_out(int argc, char **argv) {
 
         return 1;
     }
-
-    Brufs::File file(root);
-    file.init(entry.inode_id, hdr);
-    root.destroy_inode_header(hdr);
 
     const auto size = file.get_size();
     auto buf = new char[TRANSFER_BUFFER_SIZE];

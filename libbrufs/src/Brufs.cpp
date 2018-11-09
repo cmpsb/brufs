@@ -71,10 +71,12 @@ Brufs::Brufs::Brufs(Disk *dsk) :
     if (this->stt < 0) return;
 
     this->fbt.set_target(&this->hdr->fbt_address);
-    this->fbt.update_root(this->hdr->fbt_address, this->hdr->cluster_size);
+    this->stt = this->fbt.update_root(this->hdr->fbt_address, this->hdr->cluster_size);
+    if (this->stt < Status::OK) return;
 
     this->rht.set_target(&this->hdr->rht_address);
-    this->rht.update_root(this->hdr->rht_address, this->hdr->cluster_size);
+    this->stt = this->rht.update_root(this->hdr->rht_address, this->hdr->cluster_size);
+    if (this->stt < Status::OK) return;
 
     this->stt = Status::OK;
 }

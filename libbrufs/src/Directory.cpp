@@ -32,10 +32,11 @@ bool equiv_values(const DirectoryEntry *current, const DirectoryEntry *replaceme
 }}
 
 Brufs::Status Brufs::Directory::init(const InodeId &id, const InodeHeader *hdr) {
-    Inode::init(id, hdr);
+    auto status = Inode::init(id, hdr);
+    if (status < Status::OK) return status;
 
     FileEntryTree entries(*this);
-    auto status = entries.init();
+    status = entries.init();
     if (status < Status::OK) return status;
 
     return this->store();

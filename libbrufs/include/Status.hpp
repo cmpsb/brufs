@@ -30,7 +30,7 @@ namespace Brufs {
  * A status code.
  * Negative values indicate an error, 0 indicates nominal success.
  */
-enum Status {
+enum [[nodiscard]] Status {
     /**
      * An internal error that can't be explained.
      * The library should try to NEVER generate this status.

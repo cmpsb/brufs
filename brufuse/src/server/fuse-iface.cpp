@@ -461,14 +461,9 @@ static void on_mkdir(fuse_req_t req, fuse_ino_t parent, const char *name, mode_t
     fuse_reply_entry(req, &fuse_entry);
     return;
 
-clean_on_error: {
-        auto actual_status = status; // Prevent modification by destroy and remove
-
-        new_dir.destroy();
-        root->remove_inode(new_inode_id, new_dir);
-
-        status = actual_status;
-    }
+clean_on_error:
+    (void) new_dir.destroy();
+    (void) root->remove_inode(new_inode_id, new_dir);
 
     // fall through
 reply_status:
@@ -539,8 +534,8 @@ static void on_mknod(fuse_req_t req, fuse_ino_t parent, const char *name, mode_t
     return;
 
 clean_on_error:
-    new_file.destroy();
-    root->remove_inode(new_inode_id, new_file);
+    (void) new_file.destroy();
+    (void) root->remove_inode(new_inode_id, new_file);
 
     // fall through
 reply_status:
@@ -596,7 +591,11 @@ static void on_read(
     auto root = root_handle->root;
 
     Brufs::File file(*root);
-    root_handle->get_file(ino_to_inode_id(ino), file);
+    auto status = root_handle->get_file(ino_to_inode_id(ino), file);
+    if (status < Brufs::Status::OK) {
+        fuse_reply_err(req, status_to_errno(status));
+        return;
+    }
 
     auto uoff = static_cast<size_t>(off);
     if (off < 0 || uoff > file.get_header()->file_size) {
@@ -633,10 +632,14 @@ static void on_readdir(
     auto root = root_handle->root;
 
     Brufs::Directory dir(*root);
-    root_handle->get_directory(ino_to_inode_id(ino), dir);
+    auto status = root_handle->get_directory(ino_to_inode_id(ino), dir);
+    if (status < Brufs::Status::OK) {
+        fuse_reply_err(req, status_to_errno(status));
+        return;
+    }
 
     Brufs::Vector<Brufs::DirectoryEntry> entries;
-    auto status = dir.collect(entries);
+    status = dir.collect(entries);
     if (status < Brufs::Status::OK) {
         fuse_reply_err(req, status_to_errno(status));
         return;
@@ -792,7 +795,7 @@ static void on_rmdir(fuse_req_t req, fuse_ino_t parent_ino, const char *name) {
         return;
     }
 
-    parent.remove(child_entry);
+    status = parent.remove(child_entry);
     if (status < Brufs::Status::OK) goto reply_status;
 
     if (dir.get_header()->num_links > 0) --dir.get_header()->num_links;

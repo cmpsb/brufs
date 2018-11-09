@@ -147,7 +147,7 @@ Status Node<K, V>::store() {
 }
 
 template<typename K, typename V>
-Status Node<K, V>::locate(const K &key, unsigned int &result) {
+void Node<K, V>::locate(const K &key, unsigned int &result) {
     assert(this->hdr->num_values > 0);
 
     auto keys = this->get_keys();
@@ -156,8 +156,6 @@ Status Node<K, V>::locate(const K &key, unsigned int &result) {
     for (; i < (this->hdr->num_values - 1) && key >= keys[i]; ++i);
 
     result = i;
-
-    return Status::OK;
 }
 
 template<typename K, typename V>
@@ -381,7 +379,7 @@ Status Node<K, V>::split(const K &key, const R *value, const unsigned int idx) {
 
     status = sibling.store();
     if (status < 0) {
-        this->container->free(sibling_extent);
+        (void) this->container->free(sibling_extent);
         return status;
     }
 
@@ -390,7 +388,7 @@ Status Node<K, V>::split(const K &key, const R *value, const unsigned int idx) {
 
     status = this->store();
     if (status < 0) {
-        this->container->free(sibling_extent);
+        (void) this->container->free(sibling_extent);
         return status;
     }
 
@@ -399,7 +397,7 @@ Status Node<K, V>::split(const K &key, const R *value, const unsigned int idx) {
             sibling_keys[num_left - 1], &sibling_extent.offset, this->index_in_parent
         );
         if (status < 0) {
-            this->container->free(sibling_extent);
+            (void) this->container->free(sibling_extent);
             return status;
         }
 
@@ -414,7 +412,7 @@ Status Node<K, V>::split(const K &key, const R *value, const unsigned int idx) {
         Extent parent_extent;
         status = this->container->alloc(this->length, parent_extent);
         if (status < 0) {
-            this->container->free(sibling_extent);
+            (void) this->container->free(sibling_extent);
             return status;
         }
 
@@ -449,7 +447,7 @@ template <typename R>
 Status Node<K, V>::insert_direct(const K &key, const R *value, bool collide) {
     unsigned int idx;
     if (this->hdr->level > 0) this->locate(key, idx);
-    else this->locate_in_leaf(key, idx);
+    else (void) this->locate_in_leaf(key, idx);
 
     return this->insert_direct_at(key, value, idx, collide);
 }
@@ -688,12 +686,15 @@ Status Node<K, V>::remove_direct(unsigned int idx) {
     auto keys = this->get_keys();
 
     if (this->hdr->level > 0 && this->parent == nullptr && this->hdr->num_values == 2) {
-        this->container->free({this->addr, this->length});
+        status = this->container->free({this->addr, this->length});
 
         auto values = this->get_values<Address>();
 
         const auto addr = values[1 - idx];
-        return this->container->update_root(addr);
+        Status also_status = this->container->update_root(addr);
+
+        if (status >= Status::OK) return also_status;
+        return status;
     }
 
     --this->hdr->num_values;
@@ -887,48 +888,8 @@ Status Node<K, V>::count_used_space(Size &size) {
 }
 
 template<typename K, typename V>
-int Node<K, V>::pretty_print(char *buf, Size len, bool reload) {
-    if (reload) {
-        this->load();
-    }
-
-    int total = snprintf(buf, len, "class %lX << %s >> {\n%u values\n}\n",
-        this->addr, this->hdr->level == 0 ? "(L,#228B22)" : "(I,#6B4423)", this->hdr->num_values
-    );
-
-    if (this->hdr->level == 0) {
-        auto keys = this->get_keys();
-        auto values = this->get_values<V>();
-
-        for (unsigned int i = 0; i < this->hdr->num_values; ++i) {
-            long rd = rand() * long(rand());
-            total += snprintf(buf + total, len - total, "class \"%ld <- %ld\" as %ld_%ld << value >>\n", values[i], keys[i], values[i], rd);
-            total += snprintf(buf + total, len - total, "%lX --> %ld_%ld : > \"<= %ld\"\n", this->addr, values[i], rd, keys[i]);
-        }
-    } else {
-
-        auto keys = this->get_keys();
-        auto values = this->get_values<Address>();
-
-        for (unsigned int i = 0; i < this->hdr->num_values - 1; ++i) {
-            total += snprintf(buf + total, len - total, "%lX --> %lX : > \"<= %ld\"\n", this->addr, values[i], keys[i]);
-        }
-
-        total += snprintf(buf + total, len - total, "%lX --> %lX : > \"> %ld\"\n", this->addr, values[this->hdr->num_values - 1], keys[this->hdr->num_values - 2]);
-
-        for (unsigned int i = 0; i < this->hdr->num_values; ++i) {
-            Node<K, V> child(this->fs, values[i], this->length, this->container, this, i);
-            total += child.pretty_print(buf + total, len - total);
-        }
-    }
-
-    if (this->prev()) {
-        total += snprintf(buf + total, len - total, "%lX <- %lX\n", this->prev(), this->addr);
-    } else {
-        total += snprintf(buf + total, len - total, "nullptr%hhu <- %lX\nclass nullptr%hhu << (N,#B22222) >>\n", this->hdr->level, this->addr, this->hdr->level);
-    }
-
-    return total;
+int Node<K, V>::pretty_print(UNUSED char *buf, UNUSED Size len, UNUSED bool reload) {
+    return 0;
 }
 
 }}

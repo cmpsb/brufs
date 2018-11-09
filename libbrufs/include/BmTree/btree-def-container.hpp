@@ -99,7 +99,7 @@ Status BmTree<K, V>::init(Size length) {
 
     status = new_root.init();
     if (status < 0) {
-        this->fs->free_blocks(root_extent);
+        (void) this->fs->free_blocks(root_extent);
         return status;
     }
 
@@ -254,10 +254,8 @@ Status BmTree<K, V>::walk(ContextlessEntryConsumer<V> consumer) {
 }
 
 template <typename K, typename V>
-int BmTree<K, V>::pretty_print_root(char *buf, Size len) {
-    this->root.load();
-
-    return this->root.pretty_print(buf, len, false);
+int BmTree<K, V>::pretty_print_root(UNUSED char *buf, UNUSED Size len) {
+    return 0;
 }
 
 }}

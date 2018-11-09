@@ -79,6 +79,7 @@ template <typename K, typename V>
 Status Node<K, V>::init() {
     memset(this->buf, 0, this->length);
     new (this->hdr) Header;
+    this->hdr->size = next_multiple_of(this->hdr->size, alignof(K));
     this->hdr->size = this->hdr->size >= sizeof(K) ? this->hdr->size : sizeof(K);
 
     return this->store();
@@ -90,22 +91,26 @@ auto Node<K, V>::get_record_size() {
 }
 
 template<typename K, typename V>
+template <typename R>
 auto Node<K, V>::get_cap() {
     auto usable = (this->length - this->hdr->size - sizeof(Address));
-    return usable / (sizeof(K) + this->get_record_size());
+    return usable / next_multiple_of(sizeof(K) + this->get_record_size(), alignof(R));
 }
 
 template<typename K, typename V>
 template<typename R>
 R *Node<K, V>::get_values() {
-    return reinterpret_cast<R *>(this->buf + this->hdr->size + this->get_cap() * sizeof(K));
+    return reinterpret_cast<R *>(
+        this->buf + next_multiple_of(this->hdr->size + this->get_cap<R>() * sizeof(K), alignof(R))
+    );
 }
 
 template <typename K, typename V>
 template <typename R>
 R *Node<K, V>::get_value(unsigned int idx) {
     return reinterpret_cast<R *>(
-        this->buf + this->hdr->size + this->get_cap() * sizeof(K) + idx * this->get_record_size()
+        this->buf + next_multiple_of(this->hdr->size + this->get_cap<R>() * sizeof(K), alignof(R))
+        + idx * this->get_record_size()
     );
 }
 
@@ -455,7 +460,7 @@ Status Node<K, V>::insert_direct(const K &key, const R *value, bool collide) {
 template <typename K, typename V>
 template <typename R>
 Status Node<K, V>::insert_direct_at(const K &key, const R *value, unsigned int idx, bool collide) {
-    auto key_cap = this->get_cap();
+    auto key_cap = this->get_cap<R>();
     if (this->hdr->num_values >= key_cap) return this->split<R>(key, value, idx);
 
     auto keys = this->get_keys();
@@ -579,7 +584,7 @@ Status Node<K, V>::update(const K &key, const V *value) {
 template <typename K, typename V>
 template <typename R>
 Status Node<K, V>::adopt(Node<K, V> *adoptee) {
-    auto value_cap = this->get_cap();
+    auto value_cap = this->get_cap<R>();
     auto num_left = adoptee->hdr->num_values;
     auto num_right = this->hdr->num_values;
 
@@ -705,7 +710,7 @@ Status Node<K, V>::remove_direct(unsigned int idx) {
         (this->hdr->num_values - idx) * this->get_record_size()
     );
 
-    auto value_cap = this->get_cap();
+    auto value_cap = this->get_cap<R>();
 
     // If the node is full enough or is the only node in the tree, just save and return.
     if (this->hdr->num_values >= value_cap / 2 || this->parent == nullptr) {

@@ -361,6 +361,7 @@ struct Node {
      *
      * @tparam R the type of value this node stores
      */
+    template <typename R>
     auto get_cap();
 
     /**

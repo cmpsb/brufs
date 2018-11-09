@@ -67,7 +67,7 @@ int mkdir(int argc, char **argv) {
     Brufs::RootHeader root_header;
     status = fs.find_root(root_name.c_str(), root_header);
     if (status < Brufs::Status::OK) {
-        fprintf(stderr, "Unable to find root %s: %s\n", 
+        fprintf(stderr, "Unable to find root %s: %s\n",
             root_name.c_str(), io.strstatus(status)
         );
         return 1;
@@ -84,9 +84,9 @@ int mkdir(int argc, char **argv) {
     }
 
     Brufs::String local_path = path.substr(
-        colon_pos + 1, 
-        path.back() == '/' ? 
-            path.get_size() - colon_pos - 2 :
+        colon_pos + 1,
+        path.back() == '/' ?
+            path.size() - colon_pos - 2 :
             Brufs::String::npos
     );
 
@@ -100,7 +100,7 @@ int mkdir(int argc, char **argv) {
         Brufs::DirectoryEntry entry;
         status = dir.look_up(component.c_str(), entry);
         if (status < Brufs::Status::OK) {
-            fprintf(stderr, "Unable to locate %s: %s\n", 
+            fprintf(stderr, "Unable to locate %s: %s\n",
                 component.c_str(), io.strstatus(status)
             );
 
@@ -110,7 +110,7 @@ int mkdir(int argc, char **argv) {
         Brufs::Directory subdir(root);
         status = root.open_directory(entry.inode_id, subdir);
         if (status < Brufs::Status::OK) {
-            fprintf(stderr, "Unable to open %s as a directory: %s\n", 
+            fprintf(stderr, "Unable to open %s as a directory: %s\n",
                 component.c_str(), io.strstatus(status)
             );
 
@@ -165,7 +165,7 @@ int mkdir(int argc, char **argv) {
         return 1;
     }
 
-    assert(!local_path.empty() && local_path.get_size() <= Brufs::MAX_LABEL_LENGTH);
+    assert(!local_path.empty() && local_path.size() <= Brufs::MAX_LABEL_LENGTH);
 
     Brufs::DirectoryEntry entry;
     strncpy(entry.label, local_path.c_str(), Brufs::MAX_LABEL_LENGTH);

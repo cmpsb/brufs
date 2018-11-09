@@ -66,29 +66,29 @@ public:
     }
 
     const char &back() const {
-        return this->c_str()[this->get_size() - 1];
+        return this->c_str()[this->size() - 1];
     }
 
     char &back() {
-        return this->data()[this->get_size() - 1];
+        return this->data()[this->size() - 1];
     }
 
-    Size get_size() const {
+    Size size() const {
         return Vector::get_size() - 1;
     }
 
     String operator+(const String &other) const {
         String copy(*this);
 
-        copy.resize(this->get_size() + other.get_size() + 1);
-        memcpy(copy.data() + this->get_size(), other.data(), other.get_size());
+        copy.resize(this->size() + other.get_size() + 1);
+        memcpy(copy.data() + this->size(), other.data(), other.get_size());
         copy.terminate();
 
         return copy;
     }
 
     bool empty() const {
-        return this->get_size() == 0;
+        return this->size() == 0;
     }
 
     Offset find(char ch, Offset pos = 0) const {
@@ -99,7 +99,7 @@ public:
     }
 
     String substr(Offset pos, Size count = npos) const {
-        auto remaining_size = this->get_size() - pos;
+        auto remaining_size = this->size() - pos;
         auto actual_count = count == npos ? remaining_size : count;
         auto actual_size = actual_count < remaining_size ? actual_count : remaining_size;
 
@@ -131,9 +131,9 @@ public:
     }
 
     bool operator==(const String &other) const {
-        if (this->get_size() != other.get_size()) return false;
+        if (this->size() != other.get_size()) return false;
 
-        return memcmp(this->c_str(), other.c_str(), this->get_size()) == 0;
+        return memcmp(this->c_str(), other.c_str(), this->size()) == 0;
     }
 
     void fit() {

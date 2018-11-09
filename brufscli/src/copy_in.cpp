@@ -73,7 +73,7 @@ int copy_in(int argc, char **argv) {
     Brufs::RootHeader root_header;
     status = fs.find_root(root_name.c_str(), root_header);
     if (status < Brufs::Status::OK) {
-        fprintf(stderr, "Unable to find root %s: %s\n", 
+        fprintf(stderr, "Unable to find root %s: %s\n",
             root_name.c_str(), io.strstatus(status)
         );
         return 1;
@@ -90,9 +90,9 @@ int copy_in(int argc, char **argv) {
     }
 
     Brufs::String local_path = path.substr(
-        colon_pos + 1, 
-        path.back() == '/' ? 
-            path.get_size() - colon_pos - 2 :
+        colon_pos + 1,
+        path.back() == '/' ?
+            path.size() - colon_pos - 2 :
             Brufs::String::npos
     );
 
@@ -106,7 +106,7 @@ int copy_in(int argc, char **argv) {
         Brufs::DirectoryEntry entry;
         status = dir.look_up(component.c_str(), entry);
         if (status < Brufs::Status::OK) {
-            fprintf(stderr, "Unable to locate %s: %s\n", 
+            fprintf(stderr, "Unable to locate %s: %s\n",
                 component.c_str(), io.strstatus(status)
             );
 
@@ -116,7 +116,7 @@ int copy_in(int argc, char **argv) {
         Brufs::Directory subdir(root);
         status = root.open_directory(entry.inode_id, subdir);
         if (status < Brufs::Status::OK) {
-            fprintf(stderr, "Unable to open %s as a directory: %s\n", 
+            fprintf(stderr, "Unable to open %s as a directory: %s\n",
                 component.c_str(), io.strstatus(status)
             );
 
@@ -129,7 +129,7 @@ int copy_in(int argc, char **argv) {
     Brufs::DirectoryEntry entry;
     status = dir.look_up(local_path, entry);
     if (status < Brufs::Status::OK) {
-        fprintf(stderr, "Unable to locate %s to write to: %s\n", 
+        fprintf(stderr, "Unable to locate %s to write to: %s\n",
             local_path.c_str(), io.strstatus(status)
         );
 
@@ -159,7 +159,7 @@ int copy_in(int argc, char **argv) {
         if (num_read == 0) {
             if (feof(in_file)) break;
             if (ferror(in_file)) {
-                fprintf(stderr, "I/O error while reading from the source file: %s\n", 
+                fprintf(stderr, "I/O error while reading from the source file: %s\n",
                     strerror(errno)
                 );
 
@@ -176,7 +176,7 @@ int copy_in(int argc, char **argv) {
             );
 
             if (num_written < Brufs::Status::OK) {
-                fprintf(stderr, "Unable to write %lu bytes: %s\n", 
+                fprintf(stderr, "Unable to write %lu bytes: %s\n",
                     num_read - num_transferred, io.strstatus(num_written)
                 );
 

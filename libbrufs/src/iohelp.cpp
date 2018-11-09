@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2018 Luc Everse <luc@cmpsb.net>
+ * Copyright (c) 2017-2018 Luc Everse <luc@wukl.net>
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -28,7 +28,7 @@
 /**
  * Reads a number of bytes from a certain offset from disk.
  * Guarantees that exactly `count` bytes are read.
- * 
+ *
  * @param dsk the disk to read from
  * @param buf the buffer to store the bytes in
  * @param count the number of bytes to read
@@ -58,7 +58,7 @@ Brufs::SSize Brufs::dread(Disk *dsk, void *buf, Size count, Address offset) {
 /**
  * Writes a number of bytes from a certain offset to disk.
  * Guarantees that exactly `count` bytes are written.
- * 
+ *
  * @param dsk the disk to write to
  * @param buf the buffer to read the bytes from
  * @param count the number of bytes to write

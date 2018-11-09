@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2018 Luc Everse <luc@cmpsb.net>
+ * Copyright (c) 2017-2018 Luc Everse <luc@wukl.net>
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -32,20 +32,20 @@ namespace Brufs {
 
 /**
  * A root in the filesystem.
- * 
+ *
  * The filesystem may have multiple roots, each with their own principal owner.
  */
 struct RootHeader {
     /**
      * The name of the folder
-     * 
+     *
      * NUL-terminated, so up to 255 characters long
      */
     char label[MAX_LABEL_LENGTH];
 
     /**
      * Flags
-     * 
+     *
      * Defaults to 0
      */
     uint64_t flags = 0;

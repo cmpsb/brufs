@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2018 Luc Everse <luc@cmpsb.net>
+ * Copyright (c) 2017-2018 Luc Everse <luc@wukl.net>
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -31,9 +31,9 @@
 namespace Brufs { namespace BmTree {
 
 template<typename K, typename V>
-Node<K, V>::Node(Brufs *fs, Address addr, Size length, BmTree<K, V> *container, 
+Node<K, V>::Node(Brufs *fs, Address addr, Size length, BmTree<K, V> *container,
                  Node<K, V> *parent, unsigned int index_in_parent) :
-    fs(fs), addr(addr), length(length), container(container), parent(parent), 
+    fs(fs), addr(addr), length(length), container(container), parent(parent),
     index_in_parent(index_in_parent)
 {
     this->buf = static_cast<char *>(malloc(length));
@@ -253,8 +253,8 @@ int Node<K, V>::copy_while(const K &key, uint8_t *value, unsigned int start, int
     int k = 0;
     while (!strict || keys[i] == key) {
         memcpy(
-            value + k * this->get_record_size(), 
-            this->get_value<V>(i), 
+            value + k * this->get_record_size(),
+            this->get_value<V>(i),
             this->get_record_size()
         );
 
@@ -498,7 +498,7 @@ Status Node<K, V>::insert(const K &key, const V *value, bool collide) {
         this->hdr->num_values = 1;
         return this->store();
     }
-        
+
     if (this->hdr->level > 0) {
         // This is an inner node, insert the node into the next
         unsigned int idx;
@@ -699,8 +699,8 @@ Status Node<K, V>::remove_direct(unsigned int idx) {
     --this->hdr->num_values;
     memmove(keys + idx, keys + idx + 1, (this->hdr->num_values - idx) * sizeof(K));
     memmove(
-        this->get_value<R>(idx), 
-        this->get_value<R>(idx + 1), 
+        this->get_value<R>(idx),
+        this->get_value<R>(idx + 1),
         (this->hdr->num_values - idx) * this->get_record_size()
     );
 

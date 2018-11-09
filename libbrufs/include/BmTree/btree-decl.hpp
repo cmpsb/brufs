@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2018 Luc Everse <luc@cmpsb.net>
+ * Copyright (c) 2017-2018 Luc Everse <luc@wukl.net>
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -38,11 +38,11 @@ namespace BmTree {
 
 /**
  * Allocates one or more blocks to store tree data in.
- * 
+ *
  * @param fs the filesystem to allocate the blocks from
  * @param length the number of bytes the allocation should contain
  * @param target where to store allocation information
- * 
+ *
  * @return a status code whether allocation succeeded or failed
  */
 using Allocator = Status (*)(Brufs &fs, Size length, Extent &target);
@@ -94,7 +94,7 @@ struct Header {
      */
     uint32_t num_values;
 
-    Header(uint8_t level = 0, uint32_t num_values = 0) : 
+    Header(uint8_t level = 0, uint32_t num_values = 0) :
         magic {'B', '+'},
         level(level),
         size(sizeof(Header)),
@@ -109,7 +109,7 @@ class Node;
 
 /**
  * A B+tree with flexible index prediction.
- * 
+ *
  * @tparam K the key type
  * @tparam V the value type in the leaves
  * @tparam A the Allocator function to use
@@ -151,10 +151,10 @@ private:
 
     /**
      * Allocates a block for the tree.
-     * 
+     *
      * @param length the length of the block in bytes
      * @param target where to write the block extent
-     * 
+     *
      * @return a status return code
      */
     Status alloc(Size length, Extent &target);
@@ -164,17 +164,17 @@ private:
 public:
     /**
      * Creates a Bm+tree by loading an existing tree from disk.
-     * 
+     *
      * @param fs the filesystem the tree resides on
      * @param addr the address of the root node of the tree
      * @param length the size of each node in the tree
      * @param max_level the maximum level of nodes in the tree
      */
-    BmTree(Brufs *fs, Address addr, Size length, 
+    BmTree(Brufs *fs, Address addr, Size length,
            Allocator alloc = ALLOC_NORMAL, Deallocator dealloc = DEALLOC_NORMAL,
            unsigned int max_level = 5);
 
-    BmTree(Brufs *fs, Size length, 
+    BmTree(Brufs *fs, Size length,
            Allocator alloc = ALLOC_NORMAL, Deallocator dealloc = DEALLOC_NORMAL,
            unsigned int max_level = 5);
 
@@ -185,8 +185,8 @@ public:
     Status init(Size new_length = 0);
 
     Status search(const K key, V *value, bool exact = false);
-    Status search(const K key, V &value, bool exact = false) { 
-        return this->search(key, &value, exact); 
+    Status search(const K key, V &value, bool exact = false) {
+        return this->search(key, &value, exact);
     }
 
     template <typename P>
@@ -229,7 +229,7 @@ public:
     /**
      * @brief [brief description]
      * @details [long description]
-     * 
+     *
      * @param new_addr [description]
      */
     Status update_root(Address new_addr, Size length = 0);
@@ -250,10 +250,10 @@ public:
 
 /**
  * A node in the Bm+tree.
- * 
+ *
  * If this is not a leaf node, then the values will have the Brufs::address type.
  * The V template parameter should still be the leaf type, however.
- * 
+ *
  * @tparam K the key type
  * @tparam V the value type in the leaves
  * @tparam A the allocator function to use
@@ -303,19 +303,19 @@ struct Node {
 
     /**
      * Creates a new node.
-     * 
+     *
      * @param fs the filesystem the node belongs to
      * @param addr the address of the node's on-disk data
      * @param length the size, in bytes, of the node data
      * @param container the managing container representing the entire tree
      * @param parent the parent of this node (if any; NULL if this is the root)
      */
-    Node(Brufs *fs, Address addr, Size length, BmTree<K, V> *container, 
+    Node(Brufs *fs, Address addr, Size length, BmTree<K, V> *container,
          Node<K, V> *parent = nullptr, unsigned int index_in_parent = UINT_MAX);
 
     /**
      * Creates a new node not backed by any on-disk structure.
-     * 
+     *
      * @param fs the filesystem the tree belongs to
      * @param container the managing container representing the entire tree
      */
@@ -324,7 +324,7 @@ struct Node {
     /**
      * Copies another node.
      * This creates another view into the same on-disk structure.
-     * 
+     *
      * @param other the node to copy
      */
     Node(const Node<K, V> &other);
@@ -337,35 +337,35 @@ struct Node {
     /**
      * Copies another node into this instance.
      * This copies the other node's view into this node, it does not copy the on-disk structure.
-     * 
+     *
      * @param other the node to copy
      */
     Node<K, V> &operator=(const Node<K, V> &other);
 
     /**
      * Initializes the node.
-     * 
+     *
      * @return a status code
      */
     Status init();
 
     /**
      * Returns the size of the value type in bytes.
-     * 
+     *
      * @return the size of the value type
      */
     auto get_record_size();
 
     /**
      * Returns the maximum possible amount of values (and thus also keys) this node can contain.
-     * 
+     *
      * @tparam R the type of value this node stores
      */
     auto get_cap();
 
     /**
      * Returns a pointer into the in-memory buffer to the first value in the node.
-     * 
+     *
      * @tparam R the type of value this node stores
      * @return a pointer to the first value
      */
@@ -377,7 +377,7 @@ struct Node {
 
     /**
      * Returns a pointer into the in-memory buffer to the first key in the node.
-     * 
+     *
      * @return a pointer to the first key
      */
     K *get_keys();
@@ -391,7 +391,7 @@ struct Node {
      * Returns a reference to the address of the previous node.
      */
     Address &prev();
-    
+
     /**
      * Loads the node from disk.
      *
@@ -401,48 +401,48 @@ struct Node {
 
     /**
      * Writes the node to disk.
-     * 
+     *
      * @return a status code
      */
     Status store();
 
     /**
      * Finds the index of the best match for the search key.
-     * 
+     *
      * @param key the key to search for
      * @param result where to store the index
-     * 
+     *
      * @return E_NOT_FOUND if no match could be found, OK otherwise
      */
     Status locate(const K &key, unsigned int &result);
 
     /**
      * Finds the index of the best match for the search key.
-     * 
+     *
      * @param key the key to search for
      * @param result where to store the index
-     * 
+     *
      * @return E_NOT_FOUND if no match could be found, OK otherwise
      */
     Status locate_in_leaf(const K &key, unsigned int &result);
 
     /**
      * Finds the index of the exact match for the search key.
-     * 
+     *
      * @param key the key to search for
      * @param result where to store the index
-     * 
+     *
      * @return E_NOT_FOUND if no match could be found, OK otherwise
      */
     Status locate_in_leaf_strict(const K &key, unsigned int &result);
 
     /**
      * Looks up the value associated with the key.
-     * 
+     *
      * @param key the key to search for
      * @param value where to store the value
      * @param strict whether to only return success if the key matches exactly
-     * 
+     *
      * @return a status code; OK if the key was found, E_NOT_FOUND if it wasn't
      */
     Status search(const K &key, V *value, bool exact);
@@ -460,11 +460,11 @@ struct Node {
 
     /**
      * Inserts a value in this node, without walking the rest of the tree.
-     * 
+     *
      * @param key the key to insert the value under
      * @param value the value to insert
      * @tparam R the type of value to insert; addresses for inner nodes and Vs for leaves
-     * 
+     *
      * @return a status code
      */
     template <typename R>
@@ -475,10 +475,10 @@ struct Node {
 
     /**
      * Inserts a value in this part of the (sub-)tree.
-     * 
+     *
      * @param key the key to insert the value under
      * @param value the value to insert
-     * 
+     *
      * @return a status code
      */
     Status insert(const K &key, const V *value, bool collide);
@@ -510,7 +510,7 @@ struct Node {
     //     (void) buf;
     //     (void) len;
     //     (void) reload;
-    //     return 0; 
+    //     return 0;
     // }
 };
 

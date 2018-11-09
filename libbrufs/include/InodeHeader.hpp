@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2018 Luc Everse <luc@cmpsb.net>
+ * Copyright (c) 2017-2018 Luc Everse <luc@wukl.net>
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -43,7 +43,7 @@ enum InodeFlag {
 struct InodeHeader {
     /**
      * The timestamp the file was created
-     * 
+     *
      * Should not change after the inode is allocated
      */
     Timestamp created;
@@ -54,7 +54,7 @@ struct InodeHeader {
     Timestamp last_modified;
 
     /**
-     * The ID of the owner. 
+     * The ID of the owner.
      */
     OwnerId owner;
 
@@ -83,7 +83,7 @@ struct InodeHeader {
 
     /**
      * Flags
-     * 
+     *
      * Defaults to 0
      */
     uint16_t flags;

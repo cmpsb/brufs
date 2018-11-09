@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2018 Luc Everse <luc@cmpsb.net>
+ * Copyright (c) 2017-2018 Luc Everse <luc@wukl.net>
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -35,7 +35,7 @@ struct CheckedExtent : public Extent {
     Hash checksum;
 };
 static_assert(
-    std::is_standard_layout<CheckedExtent>::value, 
+    std::is_standard_layout<CheckedExtent>::value,
     "the checked extent structure must be standard-layout"
 );
 

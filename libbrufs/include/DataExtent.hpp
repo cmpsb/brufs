@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2018 Luc Everse <luc@cmpsb.net>
+ * Copyright (c) 2017-2018 Luc Everse <luc@wukl.net>
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -30,7 +30,7 @@ namespace Brufs {
 
 /**
  * An extent describing data in a file.
- * 
+ *
  * Used in small to big files where large amounts of zeroes are represented by holes, or missing
  * extents. This extent includes a file offset indicating where the actual data begins, instead
  * of following the previous extent.
@@ -53,10 +53,10 @@ struct DataExtent {
 
     DataExtent() = default;
     DataExtent(const DataExtent &other) = default;
-    DataExtent(const Extent &other, const Offset local_start) : 
-        offset(other.offset), 
+    DataExtent(const Extent &other, const Offset local_start) :
+        offset(other.offset),
         length(other.length),
-        local_start(local_start) 
+        local_start(local_start)
     {}
 
     Offset get_local_end() const {
@@ -76,7 +76,7 @@ struct DataExtent {
     }
 };
 static_assert(
-    std::is_standard_layout<DataExtent>::value, 
+    std::is_standard_layout<DataExtent>::value,
     "the data extent structure must be standard-layout"
 );
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2018 Luc Everse <luc@cmpsb.net>
+ * Copyright (c) 2017-2018 Luc Everse <luc@wukl.net>
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -34,11 +34,11 @@ public:
      * Reads at most `count` bytes from the disk, starting from offset `offset`.
      * This function should be able to handle reads outside the disk's boundaries by returning an
      * error.
-     * 
+     *
      * @param buf the buffer to store the read bytes in
      * @param count the number of bytes to read
      * @param offset the offset from which to start reading
-     * 
+     *
      * @return the actual number of bytes read, 0 on EOD, or any status code on error
      */
     virtual SSize read(void *buf, Size count, Address offset) const = 0;
@@ -47,20 +47,20 @@ public:
      * Writes at most `count` bytes to the disk, starting from offset `offset`.
      * This function should be able to handle writes outside the disk's boundaries by returning
      * an error.
-     * 
+     *
      * @param buf the buffer to read the bytes from
      * @param count the number of bytes to write
      * @param offset the offset from which to start writing
-     * 
+     *
      * @return the actual number of bytes written, or any status code on error
      */
     virtual SSize write(const void *buf, Size count, Address offset) = 0;
 
     /**
      * Returns a string describing the given Status code.
-     * 
+     *
      * @param eno the Status code
-     * 
+     *
      * @return the human-readable string
      */
     virtual const char *strstatus(SSize eno) const = 0;

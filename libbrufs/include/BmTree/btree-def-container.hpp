@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2018 Luc Everse <luc@cmpsb.net>
+ * Copyright (c) 2017-2018 Luc Everse <luc@wukl.net>
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -48,17 +48,17 @@ Status BmTree<K, V>::free(const Extent &ext) {
 
 template <typename K, typename V>
 BmTree<K, V>::BmTree(
-        Brufs *fs, Address addr, Size length, 
+        Brufs *fs, Address addr, Size length,
         Allocator all, Deallocator deall,
         unsigned int max_level
-    ) : 
+    ) :
     fs(fs), length(length), max_level(max_level), value_size(sizeof(V)),
     alloctr(all), dealloctr(deall), root(fs, addr, length, this)
 {}
 
 template <typename K, typename V>
 BmTree<K, V>::BmTree(
-        Brufs *fs, Size length, 
+        Brufs *fs, Size length,
         Allocator all, Deallocator deall,
         unsigned int max_level
     ) :
@@ -68,7 +68,7 @@ BmTree<K, V>::BmTree(
 
 template <typename K, typename V>
 BmTree<K, V>::BmTree(const BmTree<K, V> &other) :
-    fs(other.fs), length(other.length), max_level(other.max_level), alloctr(other.alloctr), 
+    fs(other.fs), length(other.length), max_level(other.max_level), alloctr(other.alloctr),
     root(other.root)
 {}
 
@@ -207,8 +207,8 @@ Status BmTree<K, V>::destroy(EntryConsumer<V, P> destroyer, P payload) {
 
 template <typename K, typename V>
 Status BmTree<K, V>::destroy(ContextlessEntryConsumer<V> destroyer) {
-    return this->destroy<ContextlessEntryConsumer<V>>([](auto v, auto p) { 
-        return p(v); 
+    return this->destroy<ContextlessEntryConsumer<V>>([](auto v, auto p) {
+        return p(v);
     }, destroyer);
 }
 

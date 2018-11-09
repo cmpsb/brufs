@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2018 Luc Everse <luc@cmpsb.net>
+ * Copyright (c) 2017-2018 Luc Everse <luc@wukl.net>
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -69,16 +69,16 @@ int check(int argc, char **argv) {
     printf(
         "Capacity: %s (%lu); "
         "available: %s (%lu) in %lu extents (%d%%); "
-        "reserved: %s (%lu, %d%%)\n", 
+        "reserved: %s (%lu, %d%%)\n",
         cap_str.c_str(), capacity,
-        avail_str.c_str(), available, extents, available_pct, 
+        avail_str.c_str(), available, extents, available_pct,
         res_str.c_str(), reserved, reserved_pct
     );
 
     int in_fbt_pct = (in_fbt * 100) / capacity;
     auto in_fbt_str = Util::pretty_print_bytes(in_fbt);
 
-    printf("fbt at: 0x%lX, %s (%d%%)\n", 
+    printf("fbt at: 0x%lX, %s (%d%%)\n",
         fs.get_header().fbt_address, in_fbt_str.c_str(), in_fbt_pct
     );
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2018 Luc Everse <luc@cmpsb.net>
+ * Copyright (c) 2017-2018 Luc Everse <luc@wukl.net>
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -60,7 +60,7 @@ Brufs::String Util::pretty_print_bytes(__uint128_t bytes) {
     const int magnitude = (int) (std::log(doubleBytes) / std::log(1024));
 
     char buf[PPB_BUF_SIZE];
-    snprintf(buf, PPB_BUF_SIZE, "%3.1Lf %s", 
+    snprintf(buf, PPB_BUF_SIZE, "%3.1Lf %s",
         doubleBytes / std::pow(1024, magnitude), suffixes[magnitude]
     );
 

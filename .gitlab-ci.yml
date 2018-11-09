@@ -4,7 +4,7 @@ image: debian:sid-slim
 
 before_script:
   - apt update
-  - apt install -y gcc g++ cmake libfuse3-dev libuv1-dev git
+  - apt install -y gcc g++ cmake libfuse3-dev libuv1-dev git gcovr
 
 stages:
   - test
@@ -19,6 +19,7 @@ test-debug:
     - cmake .. -DCMAKE_BUILD_TYPE=Debug -DBRUFS_SANITIZE=OFF
     - make
     - libbrufs/test_all
+    - gcovr -sbr .. --exclude '.*catch.hpp$' --exclude '.*xxhash.*' --exclude '.*libbrufs/test.*' -o /dev/null
 
 test-release:
   stage: test

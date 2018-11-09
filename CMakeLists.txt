@@ -47,7 +47,7 @@ list(APPEND BRUFS_FLAGS "${BUILD_TYPE}")
 if ("${BUILD_TYPE}" STREQUAL "release")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2 -flto -fuse-linker-plugin -DNDEBUG")
 else ()
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -fprofile-arcs -ftest-coverage -fPIC")
 
     if (BRUFS_SANITIZE)
         list(APPEND BRUFS_FLAGS "sanitize")

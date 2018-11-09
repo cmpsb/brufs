@@ -32,7 +32,7 @@ endif ()
 STRING(TIMESTAMP BRUFS_BUILD_DATE UTC)
 
 set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_FLAGS "-Wall -Wextra -pedantic -march=haswell -mtune=native")
+set(CMAKE_CXX_FLAGS "-Wall -Wextra -pedantic -Wimplicit-fallthrough -march=haswell -mtune=native")
 
 if(NOT CMAKE_BUILD_TYPE)
     if ((NOT GIT_BRANCH) OR ("${GIT_BRANCH}" STREQUAL "master"))

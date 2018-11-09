@@ -4,7 +4,7 @@ image: debian:sid-slim
 
 before_script:
   - apt update
-  - apt install -y gcc g++ cmake libfuse3-dev libuv1-dev
+  - apt install -y gcc g++ cmake libfuse3-dev libuv1-dev git
 
 stages:
   - test

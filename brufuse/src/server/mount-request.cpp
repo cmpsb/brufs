@@ -111,23 +111,20 @@ void Brufuse::handle_mount_request(const Message &req, Message *res) {
     mounted_roots[root_name] = mounted_root;
 
     // Create the session
-    struct fuse_args raw_fuse_args;
-    raw_fuse_args.argc = num_fuse_args * 2 + 1;
-    raw_fuse_args.argv = new char *[raw_fuse_args.argc + 1]{nullptr};
-    raw_fuse_args.allocated = false; // Manage the pointers manually
-    raw_fuse_args.argv[0] = const_cast<char *>("");
+    struct fuse_args raw_fuse_args = FUSE_ARGS_INIT(0, nullptr);
+    fuse_opt_parse(&raw_fuse_args, nullptr, nullptr, nullptr);
+    fuse_opt_add_arg(&raw_fuse_args, "");
 
     for (unsigned int i = 0; i < fuse_args.size(); ++i) {
-        raw_fuse_args.argv[i + 1] = const_cast<char *>("-o");
-        raw_fuse_args.argv[i + 2] = const_cast<char *>(fuse_args[i].c_str());
+        fuse_opt_add_arg(&raw_fuse_args, "-o");
+        fuse_opt_add_arg(&raw_fuse_args, fuse_args[i].c_str());
     }
-
 
     mounted_root->session = fuse_session_new(
         &raw_fuse_args, &fs_ops, sizeof(struct fuse_lowlevel_ops), mounted_root
     );
 
-    delete[] raw_fuse_args.argv;
+    fuse_opt_free_args(&raw_fuse_args);
 
     // Mount the session
     fuse_session_mount(mounted_root->session, mount_point.c_str());

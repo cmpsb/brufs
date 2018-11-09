@@ -22,7 +22,7 @@ set(TEST_FILES
     test/btree-update.cpp
 )
 
-configure_file(cmake/config.in.hpp config.hpp)
+configure_file(cmake/config.hpp.in config.hpp)
 
 include_directories(include ${CMAKE_CURRENT_BINARY_DIR})
 

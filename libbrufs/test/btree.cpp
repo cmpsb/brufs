@@ -56,26 +56,6 @@ TEST_CASE("Bm+trees can be inserted into and queried", "[btree]") {
         REQUIRE(count == 1);
     }
 
-    // SECTION("can insert and query again many times") {
-    //     for (long i = 1000000; i >= -1000000; --i) {
-    //         CAPTURE(i);
-    //         Brufs::Status status = tree.insert(i, i + 14616742);
-    //         if (status != Brufs::Status::OK) printf("%s\n", Brufs::strerror(status));
-    //         REQUIRE(status == Brufs::Status::OK);
-    //     }
-
-    //     Brufs::Size count;
-    //     REQUIRE(tree.count_values(count) == Brufs::Status::OK);
-    //     REQUIRE(count == 2000001);
-
-    //     for (long i = -1000000; i <= 1000000; ++i) {
-    //         CAPTURE(i);
-    //         long value;
-    //         REQUIRE(tree.search(i, value) == Brufs::Status::OK);
-    //         REQUIRE(value == i + 14616742);
-    //     }
-    // }
-
     SECTION("can insert and query in a random order") {
         srand(6);
 
@@ -85,8 +65,8 @@ TEST_CASE("Bm+trees can be inserted into and queried", "[btree]") {
             long k;
             long v;
 
-            auto operator==(const kv &other) const { 
-                return this->k == other.k && this->v == other.v; 
+            auto operator==(const kv &other) const {
+                return this->k == other.k && this->v == other.v;
             }
 
             auto operator<(const kv &other) const {
@@ -106,20 +86,6 @@ TEST_CASE("Bm+trees can be inserted into and queried", "[btree]") {
             Brufs::Status status = tree.insert(kv.k, kv.v);
             REQUIRE(status == Brufs::Status::OK);
         }
-
-        // I don't usually leave commented code around, but this is too good to delete for now :D
-        // char fbuf[256];
-        // snprintf(fbuf, 256, "trees/tree-%lu.puml", gen);
-        // FILE *f = fopen(fbuf, "w");
-
-        // fprintf(f, "@startuml\nskinparam classBackgroundColor PeachPuff/PaleGoldenrod\n");
-
-        // char ppbuf[65536];
-        // tree.pretty_print_root(ppbuf, 65536);
-        // fprintf(f, "%s", ppbuf);
-
-        // fprintf(f, "hide empty fields\nhide empty methods\nhide << value >> stereotype\nhide << value >> circle\n@enduml\n");
-        // fclose(f);
 
         std::shuffle(kvs.begin(), kvs.end(), reng);
 

@@ -11,7 +11,7 @@ test-debug:
     - mkdir build
     - cd build
     - cmake .. -DCMAKE_BUILD_TYPE=Debug -DBRUFS_SANITIZE=OFF
-    - make
+    - make -j8
     - brufscli/brufs version
     - libbrufs/test_all
     - gcovr -sbr .. --exclude '.*catch.hpp$' --exclude '.*xxhash.*' --exclude '.*libbrufs/test.*' -o /dev/null
@@ -24,6 +24,6 @@ test-release:
     - mkdir build
     - cd build
     - cmake .. -DCMAKE_BUILD_TYPE=Release
-    - make
+    - make -j8
     - brufscli/brufs version
     - libbrufs/test_all

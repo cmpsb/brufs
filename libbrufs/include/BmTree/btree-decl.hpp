@@ -31,10 +31,10 @@
 #include "../Extent.hpp"
 
 namespace Brufs {
-
 class Brufs;
+}
 
-namespace BmTree {
+namespace Brufs::BmTree {
 
 /**
  * Allocates one or more blocks to store tree data in.
@@ -514,4 +514,4 @@ struct Node {
     // }
 };
 
-}}
+}

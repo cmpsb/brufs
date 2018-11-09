@@ -26,7 +26,7 @@
 #include "Brufs.hpp"
 #include "Extent.hpp"
 
-namespace Brufs { namespace BmTree {
+namespace Brufs::BmTree {
 
 /**
  * Allocates blocks using a separate pool of blocks where the free blocks tree should pull
@@ -54,4 +54,4 @@ static inline Status DEALLOC_NORMAL(Brufs &fs, const Extent &ext) {
     return fs.free_blocks(ext);
 }
 
-}}
+}

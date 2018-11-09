@@ -28,7 +28,7 @@
 #include "../io.hpp"
 #include "../Brufs.hpp"
 
-namespace Brufs { namespace BmTree {
+namespace Brufs::BmTree {
 
 template<typename K, typename V>
 Node<K, V>::Node(Brufs *fs, Address addr, Size length, BmTree<K, V> *container,
@@ -892,4 +892,4 @@ int Node<K, V>::pretty_print(UNUSED char *buf, UNUSED Size len, UNUSED bool relo
     return 0;
 }
 
-}}
+}

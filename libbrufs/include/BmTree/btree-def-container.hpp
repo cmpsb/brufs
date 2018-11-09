@@ -27,7 +27,7 @@
 #include <cstdio>
 #include <ctime>
 
-namespace Brufs { namespace BmTree {
+namespace Brufs::BmTree {
 
 template <typename K, typename V>
 Status BmTree<K, V>::update_root(Address new_addr, Size length) {
@@ -258,4 +258,4 @@ int BmTree<K, V>::pretty_print_root(UNUSED char *buf, UNUSED Size len) {
     return 0;
 }
 
-}}
+}

@@ -1,10 +1,4 @@
-# Until the runner stops trying to connect over HTTP this won't work:
-# image: twoflower.wukl.net:443/brutality/brufs-ci
-image: debian:sid-slim
-
-before_script:
-  - apt update
-  - apt install -y gcc g++ cmake libfuse3-dev libuv1-dev git gcovr
+image: wukl/brufs-ci
 
 stages:
   - test

@@ -27,7 +27,19 @@
 namespace Brufuse {
 
 static void free_handle_after_close(uv_handle_t *handle) {
-    delete reinterpret_cast<uv_pipe_t *>(handle);
+    switch (handle->type) {
+    case UV_NAMED_PIPE:
+        delete reinterpret_cast<uv_pipe_t *>(handle);
+        break;
+    case UV_STREAM:
+        delete reinterpret_cast<uv_stream_t *>(handle);
+        break;
+    case UV_HANDLE:
+        delete handle;
+        break;
+    default:
+        assert("unsupported handle type" == nullptr);
+    }
 }
 
 template <typename T>

@@ -50,7 +50,8 @@ bool equiv_values(const RootHeader *current, const RootHeader *replacement) {
 }}
 
 Brufs::Brufs::Brufs(Disk *dsk) :
-        dsk(dsk), fbt(this, nullptr, BmTree::ALLOC_FBT_BLOCK), rht(this, nullptr)
+        dsk(dsk), raw_header(nullptr),
+        fbt(this, nullptr, BmTree::ALLOC_FBT_BLOCK), rht(this, nullptr)
 {
     Header temp_header;
     memset(&temp_header, 0, sizeof(temp_header));

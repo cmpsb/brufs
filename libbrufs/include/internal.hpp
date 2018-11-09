@@ -76,23 +76,23 @@ static constexpr inline T next_power_of_two(T x) {
     return x;
 }
 
-template <typename T>
-static constexpr inline T previous_multiple_of(T multiple, T base) {
+template <typename M, typename B>
+static constexpr inline auto previous_multiple_of(M multiple, B base) {
     return ((multiple - base + 1) / base) * base;
 }
 
-template <typename T>
-static constexpr inline T next_multiple_of(T multiple, T base) {
+template <typename M, typename B>
+static constexpr inline auto next_multiple_of(M multiple, B base) {
     return ((multiple + base - 1) / base) * base;
 }
 
-template<typename T>
-static inline constexpr T min(T etaoin, T shrdlu) {
+template <typename A, typename B>
+static inline constexpr auto min(A etaoin, B shrdlu) {
     return (etaoin < shrdlu) ? etaoin : shrdlu;
 }
 
-template<typename T>
-static inline constexpr T max(T etaoin, T shrdlu) {
+template <typename A, typename B>
+static inline constexpr auto max(A etaoin, B shrdlu) {
     return (etaoin < shrdlu) ? shrdlu : etaoin;
 }
 

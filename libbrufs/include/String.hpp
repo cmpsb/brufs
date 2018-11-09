@@ -22,6 +22,7 @@
 
 #pragma once
 
+#include <cstdio>
 #include <cstring>
 
 #include "Vector.hpp"
@@ -80,7 +81,7 @@ public:
     String operator+(const String &other) const {
         String copy(*this);
 
-        copy.resize(this->size() + other.get_size() + 1);
+        copy.resize(this->size() + other.size() + 1);
         memcpy(copy.data() + this->size(), other.data(), other.get_size());
         copy.terminate();
 
@@ -136,9 +137,8 @@ public:
         return memcmp(this->c_str(), other.c_str(), this->size()) == 0;
     }
 
-    void fit() {
-        this->terminate();
-        this->resize(strlen(this->c_str()) + 1);
+    bool operator!=(const String &other) const {
+        return !(*this == other);
     }
 };
 

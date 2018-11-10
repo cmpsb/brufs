@@ -34,6 +34,13 @@ private:
     T *ptr;
 
 public:
+    template <typename... V>
+    static inline Vector<T> of(V... values) {
+        Vector<T> vec;
+        vec.push_back(values...);
+        return vec;
+    }
+
     Vector(const unsigned int capacity = 8) : size(0), capacity(capacity), ptr(new T[capacity]) {}
     Vector(const Vector<T> &other) :
         size(other.size), capacity(other.capacity), ptr(new T[other.capacity])
@@ -142,6 +149,12 @@ public:
         this->reserve(this->size + 1);
         this->ptr[this->size] = value;
         ++this->size;
+    }
+
+    template <typename... V>
+    void push_back(const T &value, const V... values) {
+        this->push_back(value);
+        this->push_back(values...);
     }
 
     void pop_back() {

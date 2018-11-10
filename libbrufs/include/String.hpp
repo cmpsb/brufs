@@ -53,6 +53,7 @@ public:
     using Vector::operator=;
     using Vector::operator[];
     using Vector::front;
+    using Vector::begin;
 
     const char *c_str() const {
         return this->data();
@@ -72,6 +73,14 @@ public:
 
     char &back() {
         return this->data()[this->size() - 1];
+    }
+
+    const char *end() const {
+        return Vector::end() - 1;
+    }
+
+    char *end() {
+        return Vector::end() - 1;
     }
 
     Size size() const {

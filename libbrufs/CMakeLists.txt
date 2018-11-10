@@ -12,6 +12,7 @@ set(SOURCE_FILES
     src/Inode.cpp
     src/Timestamp.cpp
     src/BuildInfo.cpp
+    src/PathParser.cpp
 )
 
 set(TEST_FILES
@@ -23,6 +24,7 @@ set(TEST_FILES
     test/btree-update.cpp
     test/String.cpp
     test/BuildInfo.cpp
+    test/PathParser.cpp
 )
 
 configure_file(cmake/config.hpp.in config.hpp)

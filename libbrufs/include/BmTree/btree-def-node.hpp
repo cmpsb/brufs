@@ -172,7 +172,7 @@ Status Node<K, V>::locate_in_leaf(const K &key, unsigned int &result) {
 
     unsigned int i = 0;
     for (; i < this->hdr->num_values && key > keys[i]; ++i);
-    while (key == keys[i + 1] && i < this->hdr->num_values - 1) ++i;
+    while (i < this->hdr->num_values - 1 && key == keys[i + 1]) ++i;
 
     result = i;
     if (i >= this->hdr->num_values) return Status::E_NOT_FOUND;
@@ -254,7 +254,7 @@ int Node<K, V>::copy_while(const K &key, uint8_t *value, unsigned int start, int
 
     Size i = start;
     int k = 0;
-    while (!strict || keys[i] == key) {
+    while ((!strict && keys[i] <= key) || keys[i] == key) {
         memcpy(
             value + k * this->get_record_size(),
             this->get_value<V>(i),
@@ -269,7 +269,6 @@ int Node<K, V>::copy_while(const K &key, uint8_t *value, unsigned int start, int
         --i;
     }
 
-    // if (k == 0) return 0;
     if (this->prev() == 0) return k;
 
     Node<K, V> pred(
@@ -829,7 +828,7 @@ Status Node<K, V>::get_last_leaf(Address &target) {
 
 template <typename K, typename V>
 template <typename P>
-Status Node<K, V>::destroy(EntryConsumer<V, P> destroyer, P &pl) {
+Status Node<K, V>::destroy(EntryConsumer<K, V, P> destroyer, P &pl) {
     auto status = this->container->free({this->addr, this->length});
     if (status < Status::OK) return status;
 
@@ -846,21 +845,13 @@ Status Node<K, V>::destroy(EntryConsumer<V, P> destroyer, P &pl) {
             if (status < Status::OK) return status;
         }
 
-        auto prev = this->prev();
-        if (prev == 0) return Status::OK;
-
-        Node<K, V> sibling(
-            this->fs, prev, this->length, this->container, this, this->index_in_parent - 1
-        );
-
-        status = sibling.load();
-        if (status < Status::OK) return status;
-
-        return sibling.destroy(destroyer, pl);
+        return Status::OK;
     }
 
+    auto keys = this->get_keys();
+
     for (long i = 0; i < this->hdr->num_values; ++i) {
-        do status = destroyer(*this->get_value<V>(i), pl);
+        do status = destroyer(keys[i], this->get_value<V>(i), pl);
         while (status == Status::RETRY);
 
         if (status == Status::STOP) return Status::E_STOPPED;

@@ -127,8 +127,8 @@ Brufs::Status Brufs::Directory::collect(Vector<DirectoryEntry> &entries) {
     entries.reserve(this->count());
 
     FileEntryTree tree(*this);
-    return tree.walk<Vector<DirectoryEntry> *>([](auto e, auto v) {
-        v->push_back(e);
+    return tree.walk<Vector<DirectoryEntry> *>([](UNUSED auto k, auto e, auto v) {
+        v->push_back(*e);
         return Status::OK;
     }, &entries);
 }

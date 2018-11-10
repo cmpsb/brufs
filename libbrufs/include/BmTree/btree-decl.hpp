@@ -56,11 +56,11 @@ using Deallocator = Status (*)(Brufs &fs, const Extent &ext);
 
 static inline Status DEALLOC_NORMAL(Brufs &, const Extent &);
 
-template <typename V, typename P>
-using EntryConsumer = Status (*)(V &item, P pl);
+template <typename K, typename V, typename P>
+using EntryConsumer = Status (*)(K &key, V *item, P pl);
 
-template <typename V>
-using ContextlessEntryConsumer = Status (*)(V &item);
+template <typename K, typename V>
+using ContextlessEntryConsumer = Status (*)(K &key, V *item);
 
 template <typename V>
 bool equiv_values(const V *current, const V *replacement) {
@@ -215,14 +215,14 @@ public:
     Status count_used_space(Size &size);
 
     template <typename P>
-    Status destroy(EntryConsumer<V, P> destroyer, P pl);
-    Status destroy(ContextlessEntryConsumer<V> destroyer);
+    Status destroy(EntryConsumer<K, V, P> destroyer, P pl);
+    Status destroy(ContextlessEntryConsumer<K, V> destroyer);
     Status destroy();
 
     template <typename P>
-    Status walk(EntryConsumer<V, P> consumer, P pl);
+    Status walk(EntryConsumer<K, V, P> consumer, P pl);
 
-    Status walk(ContextlessEntryConsumer<V> consumer);
+    Status walk(ContextlessEntryConsumer<K, V> consumer);
 
     int pretty_print_root(char *buf, Size len);
 
@@ -503,7 +503,7 @@ struct Node {
     Status get_last_leaf(Address &target);
 
     template <typename P>
-    Status destroy(EntryConsumer<V, P> destroyer, P &pl);
+    Status destroy(EntryConsumer<K, V, P> destroyer, P &pl);
 
     Status count_used_space(Size &size);
 

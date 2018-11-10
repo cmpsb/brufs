@@ -200,7 +200,7 @@ Status BmTree<K, V>::count_used_space(Size &size) {
 
 template <typename K, typename V>
 template <typename P>
-Status BmTree<K, V>::destroy(EntryConsumer<V, P> destroyer, P payload) {
+Status BmTree<K, V>::destroy(EntryConsumer<K, V, P> destroyer, P payload) {
     auto status = this->root.load();
     if (status < Status::OK) return status;
 
@@ -208,20 +208,20 @@ Status BmTree<K, V>::destroy(EntryConsumer<V, P> destroyer, P payload) {
 }
 
 template <typename K, typename V>
-Status BmTree<K, V>::destroy(ContextlessEntryConsumer<V> destroyer) {
-    return this->destroy<ContextlessEntryConsumer<V>>([](auto v, auto p) {
-        return p(v);
+Status BmTree<K, V>::destroy(ContextlessEntryConsumer<K, V> destroyer) {
+    return this->destroy<ContextlessEntryConsumer<K, V>>([](auto k, auto v, auto p) {
+        return p(k, v);
     }, destroyer);
 }
 
 template <typename K, typename V>
 Status BmTree<K, V>::destroy() {
-    return this->destroy([](UNUSED auto v) { return Status::OK; });
+    return this->destroy([](UNUSED auto k, UNUSED auto v) { return Status::OK; });
 }
 
 template <typename K, typename V>
 template <typename P>
-Status BmTree<K, V>::walk(EntryConsumer<V, P> consumer, P payload) {
+Status BmTree<K, V>::walk(EntryConsumer<K, V, P> consumer, P payload) {
     Status stt = this->root.load();
     if (stt < Status::OK) return stt;
 
@@ -234,10 +234,10 @@ Status BmTree<K, V>::walk(EntryConsumer<V, P> consumer, P payload) {
         stt = leaf.load();
         if (stt < Status::OK) return stt;
 
-        auto values = leaf.template get_values<V>();
+        auto keys = leaf.get_keys();
 
         for (SSize i = static_cast<Size>(leaf.hdr->num_values) - 1; i >= 0; --i) {
-            do stt = consumer(values[i], payload);
+            do stt = consumer(keys[i], leaf.template get_value<V>(i), payload);
             while (stt == Status::RETRY);
 
             if (stt == Status::STOP) return Status::OK;
@@ -251,8 +251,10 @@ Status BmTree<K, V>::walk(EntryConsumer<V, P> consumer, P payload) {
 }
 
 template <typename K, typename V>
-Status BmTree<K, V>::walk(ContextlessEntryConsumer<V> consumer) {
-    return this->walk<ContextlessEntryConsumer<V>>([](auto v, auto p) { return p(v); }, consumer);
+Status BmTree<K, V>::walk(ContextlessEntryConsumer<K, V> consumer) {
+    return this->walk<ContextlessEntryConsumer<K, V>>([](auto k, auto v, auto p) {
+        return p(k, v);
+    }, consumer);
 }
 
 template <typename K, typename V>

@@ -149,18 +149,49 @@ TEST_CASE("Bm+trees can be inserted into and queried", "[btree]") {
         REQUIRE(free_pages.size() + 1 == DISK_SIZE / PAGE_SIZE);
     }
 
+    SECTION("can destroy a big tree") {
+        for (long i = 100000; i >= -1000; --i) {
+            REQUIRE(tree.insert(i, i, true) == Brufs::Status::OK);
+        }
+
+        REQUIRE(tree.destroy() == Brufs::Status::OK);
+        REQUIRE(free_pages.size() + 1 == DISK_SIZE / PAGE_SIZE);
+    }
+
     SECTION("can walk the tree") {
         unsigned long total = 0;
-        for (int i = 0; i < 1000; total += (i % 9), ++i) {
-            REQUIRE(tree.insert(i, i % 9) == Brufs::Status::OK);
+        for (int i = 10000; i >= -10000; total += i, --i) {
+            REQUIRE(tree.insert(i, i, true) == Brufs::Status::OK);
         }
 
         unsigned long walked_total = 0;
-        REQUIRE(tree.walk<unsigned long *>([](long &v, unsigned long *p) {
-            *p += v;
+        REQUIRE(tree.walk<unsigned long *>([](long &k, long *v, unsigned long *p) {
+            CHECK(k == *v);
+            *p += *v;
             return Brufs::Status::OK;
         }, &walked_total) == Brufs::Status::OK);
 
         CHECK(total == walked_total);
     }
+
+    SECTION("can insert and query again many times") {
+        for (long i = 10000; i >= -10000; --i) {
+            CAPTURE(i);
+            auto status = tree.insert(i, i, true);
+            if (status != Brufs::Status::OK) printf("%s\n", Brufs::strerror(status));
+            REQUIRE(status == Brufs::Status::OK);
+        }
+
+        Brufs::Size count;
+        REQUIRE(tree.count_values(count) == Brufs::Status::OK);
+        CHECK(count == 20001);
+
+        for (long i = -10000; i <= 10000; ++i) {
+            CAPTURE(i);
+            long value;
+            REQUIRE(tree.search(i, value) == Brufs::Status::OK);
+            CHECK(value == i);
+        }
+    }
+
 }

@@ -67,6 +67,7 @@ public:
 };
 
 static std::stack<Brufs::Address> free_pages;
+static std::set<Brufs::Address> allocated_pages;
 
 static Brufs::Status allocate_test_page(Brufs::Brufs &fs, Brufs::Size size, Brufs::Extent &target) {
     (void) fs;
@@ -78,6 +79,8 @@ static Brufs::Status allocate_test_page(Brufs::Brufs &fs, Brufs::Size size, Bruf
     target.offset = free_pages.top();
     target.length = size;
 
+    allocated_pages.insert(target.offset);
+
     free_pages.pop();
 
     return Brufs::Status::OK;
@@ -85,6 +88,9 @@ static Brufs::Status allocate_test_page(Brufs::Brufs &fs, Brufs::Size size, Bruf
 
 static Brufs::Status deallocate_test_page(Brufs::Brufs &fs, const Brufs::Extent &ext) {
     (void) fs;
+
+    CHECK(allocated_pages.count(ext.offset) == 1);
+    allocated_pages.erase(ext.offset);
 
     free_pages.push(ext.offset);
 

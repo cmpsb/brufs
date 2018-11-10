@@ -262,8 +262,8 @@ Brufs::Status Brufs::Brufs::count_free_blocks(
     status = this->fbt.count_values(extents);
     if (status < Status::OK) return status;
 
-    return this->fbt.walk<Size *>([](const auto ext, auto acc) {
-        *acc += ext.length;
+    return this->fbt.walk<Size *>([](UNUSED auto last, auto ext, auto acc) {
+        *acc += ext->length;
         return Status::OK;
     }, &available);
 }
@@ -272,8 +272,8 @@ Brufs::Status Brufs::Brufs::count_free_blocks(
  * Roots
  */
 
-static Brufs::Status consume_root(Brufs::RootHeader &r, pl &p) {
-    *p.coll = r;
+static Brufs::Status consume_root(UNUSED Brufs::Hash &hash, Brufs::RootHeader *r, pl &p) {
+    *p.coll = *r;
     --p.count;
     ++p.coll;
 

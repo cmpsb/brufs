@@ -128,6 +128,46 @@ public:
      */
     const Vector<String> &get_components() const { return this->components; }
 
+    /**
+     * Returns the parent of the path.
+     *
+     * If the path is at the root already, the path itself is returned.
+     *
+     * @return the parent of the path
+     */
+    Path get_parent() const {
+        auto parent_components = this->components;
+        if (parent_components.get_size() > 0) parent_components.pop_back();
+
+        return Path(this->partition, this->root, parent_components);
+    }
+
+    /**
+     * Concatenates another path to this path.
+     *
+     * The partition and root of the other path, if any, are ignored.
+     *
+     * @param other the path to concatenate
+     *
+     * @return the concatenated paths
+     */
+    Path resolve(const Path &other) const {
+        auto child_components = this->components;
+        for (const auto &component : other.components) child_components.push_back(component);
+
+        return Path(this->partition, this->root, child_components);
+    }
+
+    bool operator==(const Path &other) const {
+        return this->partition == other.partition
+            && this->root == other.root
+            && this->components == other.components;
+    }
+
+    bool operator!=(const Path &other) const {
+        return !(*this == other);
+    };
+
 };
 
 }

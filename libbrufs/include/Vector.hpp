@@ -22,6 +22,11 @@
 
 #pragma once
 
+#include <cassert>
+#include <cstdlib>
+
+#include <new>
+
 #include "types.hpp"
 
 namespace Brufs {
@@ -31,7 +36,11 @@ class Vector {
 private:
     Size size;
     Size capacity;
-    T *ptr;
+
+    union {
+        T *ptr;
+        void *vptr;
+    };
 
 public:
     template <typename... V>
@@ -41,28 +50,36 @@ public:
         return vec;
     }
 
-    Vector(const unsigned int capacity = 8) : size(0), capacity(capacity), ptr(new T[capacity]) {}
-    Vector(const Vector<T> &other) :
-        size(other.size), capacity(other.capacity), ptr(new T[other.capacity])
+    Vector(const unsigned int capacity = 8) :
+        size(0), capacity(capacity), vptr(malloc(capacity * sizeof(T)))
     {
+        assert(this->vptr != nullptr);
+    }
+
+    Vector(const Vector<T> &other) :
+        size(other.size), capacity(other.capacity), vptr(malloc(other.capacity * sizeof(T)))
+    {
+        assert(this->vptr != nullptr);
+
         for (Size i = 0; i < this->size; ++i) {
-            this->ptr[i] = other[i];
+            new (this->ptr + i) T(other[i]);
         }
     }
 
     ~Vector() {
-        delete[] this->ptr;
+        this->clear();
+        free(this->vptr);
     }
 
     Vector<T> &operator=(const Vector<T> &other) {
         this->size = other.size;
         this->capacity = other.capacity;
 
-        delete[] this->ptr;
-        this->ptr = new T[other.capacity];
+        this->vptr = realloc(this->vptr, other.capacity * sizeof(T));
+        assert(this->vptr != nullptr);
 
         for (Size i = 0; i < this->size; ++i) {
-            this->ptr[i] = other[i];
+            new (this->ptr + i) T(other[i]);
         }
 
         return *this;
@@ -129,15 +146,8 @@ public:
 
         while (this->capacity < req_cap) this->capacity *= 1.4;
 
-        auto new_ptr = new T[this->capacity];
-
-        for (Size i = 0; i < this->size; ++i) {
-            new_ptr[i] = this->ptr[i];
-        }
-
-        auto old_ptr = this->ptr;
-        this->ptr = new_ptr;
-        delete[] old_ptr;
+        this->vptr = realloc(this->vptr, this->capacity * sizeof(T));
+        assert(this->vptr != nullptr);
     }
 
     void resize(Size new_size) {
@@ -147,7 +157,7 @@ public:
 
     void push_back(const T &value) {
         this->reserve(this->size + 1);
-        this->ptr[this->size] = value;
+        new (this->ptr + this->size) T(value);
         ++this->size;
     }
 
@@ -176,6 +186,16 @@ public:
 
     bool empty() const {
         return this->size == 0;
+    }
+
+    bool operator==(const Vector<T> &other) const {
+        if (this->size != other.size) return false;
+
+        for (Size i = 0; i < this->size; ++i) {
+            if (this->ptr[i] != other.ptr[i]) return false;
+        }
+
+        return true;
     }
 };
 

@@ -25,6 +25,7 @@ set(TEST_FILES
     test/String.cpp
     test/BuildInfo.cpp
     test/PathParser.cpp
+    test/Path.cpp
 )
 
 configure_file(cmake/config.hpp.in config.hpp)

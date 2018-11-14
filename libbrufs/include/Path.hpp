@@ -159,6 +159,39 @@ public:
     }
 
     /**
+     * Creates a copy of the path with the given partition name.
+     * 
+     * @param partition the new partition name
+     * 
+     * @return the path
+     */
+    Path with_partition(const String &partition) const {
+        return Path(partition, this->root, this->components);
+    }
+
+    /**
+     * Creates a copy of the path with the given root name.
+     * 
+     * @param root the new root name
+     * 
+     * @return the path
+     */
+    Path with_root(const String &root) const {
+        return Path(this->partition, root, this->components);
+    }
+
+    /**
+     * Creates a copy of the path with the given components.
+     * 
+     * @param components the new components
+     * 
+     * @return the path
+     */
+    Path with_components(const Vector<String> &components) const {
+        return Path(this->partition, this->root, components);
+    }
+
+    /**
      * Checks whether the path is equal to another.
      * 
      * Paths are equal iff they have the same partition, root and components.

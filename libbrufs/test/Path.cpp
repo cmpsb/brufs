@@ -16,4 +16,18 @@ TEST_CASE("Path operations", "[util]") {
         CHECK(parent.get_components().get_size() == 1);
         CHECK(parent.get_components()[0] == "stuff");
     }
+
+    SECTION("Can build/modify") {
+        const auto path = Brufs::Path()
+            .with_partition("vdisk0")
+            .with_root("apps")
+            .with_components(Brufs::Vector<Brufs::String>::of("brutality", "boot", "stab"));
+
+        CHECK(path.get_partition() == "vdisk0");
+        CHECK(path.get_root() == "apps");
+        CHECK(path.get_components().get_size() == 3);
+        CHECK(path.get_components()[0] == "brutality");
+        CHECK(path.get_components()[1] == "boot");
+        CHECK(path.get_components()[2] == "stab");
+    }
 }

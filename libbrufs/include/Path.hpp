@@ -184,7 +184,7 @@ public:
      */
     bool operator!=(const Path &other) const {
         return !(*this == other);
-    };
+    }
 
 };
 

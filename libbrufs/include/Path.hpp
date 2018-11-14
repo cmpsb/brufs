@@ -158,12 +158,30 @@ public:
         return Path(this->partition, this->root, child_components);
     }
 
+    /**
+     * Checks whether the path is equal to another.
+     * 
+     * Paths are equal iff they have the same partition, root and components.
+     * 
+     * @param other the other path
+     * 
+     * @return true if the paths are equal, false otherwise
+     */
     bool operator==(const Path &other) const {
         return this->partition == other.partition
             && this->root == other.root
             && this->components == other.components;
     }
 
+    /**
+     * Checks whether the path is different from another.
+     * 
+     * Paths are equal iff they have the same partition, root and components.
+     * 
+     * @param other the other path
+     * 
+     * @return true if the paths are different, false otherwise
+     */
     bool operator!=(const Path &other) const {
         return !(*this == other);
     };

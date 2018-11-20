@@ -1,5 +1,4 @@
 set(SOURCE_FILES
-    src/main.cpp
     src/init.cpp
     src/check.cpp
     src/add-root.cpp
@@ -12,11 +11,22 @@ set(SOURCE_FILES
     src/copy_in.cpp
     src/copy_out.cpp
     src/version.cpp
+    src/PathValidator.cpp
+)
+
+set(TEST_FILES
+    test/PathValidator.cpp
 )
 
 include_directories(${CMAKE_SOURCE_DIR}/libbrufs/include src)
 
-add_executable(brufscli ${SOURCE_FILES})
+add_executable(brufscli src/main.cpp ${SOURCE_FILES})
 set_target_properties(brufscli PROPERTIES OUTPUT_NAME brufs)
 
 target_link_libraries(brufscli brufs)
+
+enable_testing()
+
+add_executable(test ${SOURCE_FILES} ${TEST_FILES})
+target_link_libraries(test brufs catch)
+add_test(test test)

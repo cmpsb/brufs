@@ -33,6 +33,7 @@
 #include "libbrufs.hpp"
 
 #include "FdAbst.hpp"
+#include "PathValidator.hpp"
 
 static constexpr unsigned int TRANSFER_BUFFER_SIZE = 128 * 1024 * 1024;
 
@@ -45,18 +46,8 @@ int copy_in(int argc, char **argv) {
     Brufs::PathParser path_parser;
     auto path = path_parser.parse(argv[1]);
 
-    if (!path.has_partition()) {
-        fprintf(stderr,
-            "The path does not contain a partition (file, block device, ...) where the "
-            "filesystem is stored."
-        );
-        return 1;
-    }
-
-    if (!path.has_root()) {
-        fprintf(stderr, "The path does not contain a root.\n");
-        return 1;
-    }
+    Brufscli::PathValidator validator;
+    validator.validate(path);
 
     FILE *in_file = fopen(argv[2], "rb");
     if (!in_file) {

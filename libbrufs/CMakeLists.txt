@@ -16,7 +16,6 @@ set(SOURCE_FILES
 )
 
 set(TEST_FILES
-    test/catch.cpp
     test/btree.cpp
     test/btree-extent-values.cpp
     test/btree-range.cpp
@@ -49,6 +48,7 @@ install(
 )
 
 enable_testing()
+
 add_executable(test_all ${TEST_FILES})
-target_link_libraries(test_all brufs)
+target_link_libraries(test_all brufs catch)
 add_test(test_all test_all)

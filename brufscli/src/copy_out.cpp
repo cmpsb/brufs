@@ -32,17 +32,24 @@
 #include "libbrufs.hpp"
 
 #include "FdAbst.hpp"
+#include "PathValidator.hpp"
 
 static constexpr unsigned long long int TRANSFER_BUFFER_SIZE = 128 * 1024 * 1024;
 
 int copy_out(int argc, char **argv) {
-    if (argc < 3) {
+    if (argc != 3) {
         fprintf(stderr, "Specify a file, a path, and a file to copy to that location.\n");
         return 3;
     }
 
+    Brufs::PathParser path_parser;
+    auto path = path_parser.parse(argv[1]);
+
+    Brufscli::PathValidator validator;
+    validator.validate(path, true, true);
+
     std::string out_path = "-";
-    if (argc == 4) out_path = argv[3];
+    if (argc == 3) out_path = argv[2];
 
     FILE *out_file = out_path == "-" ? stdout : fopen(out_path.c_str(), "wb");
     if (!out_file) {
@@ -50,9 +57,10 @@ int copy_out(int argc, char **argv) {
         return 1;
     }
 
-    int iofd = open(argv[1], O_RDWR);
+    const auto disk_path = path.get_partition().c_str();
+    int iofd = open(disk_path, O_RDWR);
     if (iofd == -1) {
-        fprintf(stderr, "Unable to open %s: %s\n", argv[1], strerror(errno));
+        fprintf(stderr, "Unable to open %s: %s\n", disk_path, strerror(errno));
         return 1;
     }
 
@@ -66,85 +74,23 @@ int copy_out(int argc, char **argv) {
         return 1;
     }
 
-    const Brufs::String path = argv[2];
-    const auto colon_pos = path.find(':');
-    if (colon_pos == Brufs::String::npos) {
-        fprintf(stderr, "The path does not contain a root.\n");
-        return 1;
-    }
-
-    const auto root_name = path.substr(0, colon_pos);
+    const auto root_name = path.get_root().c_str();
     Brufs::RootHeader root_header;
-    status = fs.find_root(root_name.c_str(), root_header);
+    status = fs.find_root(root_name, root_header);
     if (status < Brufs::Status::OK) {
         fprintf(stderr, "Unable to find root %s: %s\n",
-            root_name.c_str(), io.strstatus(status)
+            root_name, io.strstatus(status)
         );
         return 1;
     }
 
     Brufs::Root root(fs, root_header);
 
-    Brufs::Directory dir(root);
-    status = root.open_directory(Brufs::ROOT_DIR_INODE_ID, dir);
-    if (status < Brufs::Status::OK) {
-        fprintf(stderr, "Unable to open root directory %s: %s\n",
-            root_name.c_str(), io.strstatus(status)
-        );
-    }
-
-    Brufs::String local_path = path.substr(
-        colon_pos + 1,
-        path.back() == '/' ?
-            path.size() - colon_pos - 2 :
-            Brufs::String::npos
-    );
-
-    if (local_path.front() == '/') local_path = local_path.substr(1);
-
-    while (local_path.find('/') != Brufs::String::npos) {
-        auto slash_pos = local_path.find('/');
-        Brufs::String component = local_path.substr(0, slash_pos);
-        local_path = slash_pos != Brufs::String::npos ? local_path.substr(slash_pos + 1) : "";
-
-        Brufs::DirectoryEntry entry;
-        status = dir.look_up(component.c_str(), entry);
-        if (status < Brufs::Status::OK) {
-            fprintf(stderr, "Unable to locate %s: %s\n",
-                component.c_str(), io.strstatus(status)
-            );
-
-            return 1;
-        }
-
-        Brufs::Directory subdir(root);
-        status = root.open_directory(entry.inode_id, subdir);
-        if (status < Brufs::Status::OK) {
-            fprintf(stderr, "Unable to open %s as a directory: %s\n",
-                component.c_str(), io.strstatus(status)
-            );
-
-            return 1;
-        }
-
-        dir = subdir;
-    }
-
-    Brufs::DirectoryEntry entry;
-    status = dir.look_up(local_path, entry);
-    if (status < Brufs::Status::OK) {
-        fprintf(stderr, "Unable to locate %s to write to: %s\n",
-            local_path.c_str(), io.strstatus(status)
-        );
-
-        return 1;
-    }
-
     Brufs::File file(root);
-    status = root.open_inode(entry.inode_id, file);
+    status = root.open_file(path, file);
     if (status < Brufs::Status::OK) {
         fprintf(stderr, "Unable to open %s for writing: %s\n",
-            local_path.c_str(), io.strstatus(status)
+            argv[1], io.strstatus(status)
         );
 
         return 1;

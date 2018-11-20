@@ -254,7 +254,7 @@ int Node<K, V>::copy_while(const K &key, uint8_t *value, unsigned int start, int
 
     Size i = start;
     int k = 0;
-    while ((!strict && keys[i] <= key) || keys[i] == key) {
+    while ((!strict && (this->prev() == 0 || keys[i] <= key)) || keys[i] == key) {
         memcpy(
             value + k * this->get_record_size(),
             this->get_value<V>(i),

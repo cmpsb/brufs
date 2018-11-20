@@ -151,13 +151,12 @@ int copy_out(int argc, char **argv) {
     }
 
     const auto size = file.get_size();
-    auto buf = new char[TRANSFER_BUFFER_SIZE];
-    assert(buf);
+    Brufs::Vector<char> buf(TRANSFER_BUFFER_SIZE);
     Brufs::Offset offset = 0;
 
     while (offset < size) {
         auto to_read = std::min(TRANSFER_BUFFER_SIZE, size - offset);
-        auto num_read = file.read(buf, to_read, offset);
+        auto num_read = file.read(buf.data(), to_read, offset);
         if (num_read < Brufs::Status::OK) {
             fprintf(stderr, "Unable to read %lld bytes: %s\n", to_read, io.strstatus(status));
             return 1;
@@ -166,7 +165,7 @@ int copy_out(int argc, char **argv) {
         Brufs::SSize num_transferred = 0;
         while (num_transferred < num_read) {
             auto num_written = fwrite(
-                buf + num_transferred, 1, num_read - num_transferred, out_file
+                buf.data() + num_transferred, 1, num_read - num_transferred, out_file
             );
             if (num_written == 0) {
                 if (feof(out_file)) break;

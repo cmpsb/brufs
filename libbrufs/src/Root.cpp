@@ -120,9 +120,51 @@ Brufs::Status Brufs::Root::open_directory(const InodeId &id, Directory &director
     auto status = this->open_inode(id, inode);
     if (status < Status::OK) return status;
 
-    if (inode.get_inode_type() != InodeType::DIRECTORY) return Status::E_WRONG_INODE_TYPE;
+    if (inode.get_inode_type() != InodeType::DIRECTORY) return Status::E_NOT_DIR;
 
     directory = Directory(inode);
+
+    return Status::OK;
+}
+
+Brufs::Status Brufs::Root::open_inode(const Path &path, Inode &inode) {
+    if (path.get_components().get_size() == 0) {
+        return this->open_inode(ROOT_DIR_INODE_ID, inode);
+    }
+
+    Directory dir(*this);
+    auto status = this->open_directory(path.get_parent(), dir);
+    if (status == Status::E_WRONG_INODE_TYPE || status == Status::E_NOT_DIR) {
+        return Status::E_NOT_DIR;
+    }
+
+    DirectoryEntry dir_entry;
+    status = dir.look_up(path.get_components().back().c_str(), dir_entry);
+    if (status < Status::OK) return status;
+
+    return this->open_inode(dir_entry.inode_id, inode);
+}
+
+Brufs::Status Brufs::Root::open_file(const Path &path, File &file) {
+    auto status = this->open_inode(path, file);
+    if (status < Status::OK) return status;
+
+    if (file.get_inode_type() != InodeType::FILE) return Status::E_WRONG_INODE_TYPE;
+    return Status::OK;
+}
+
+Brufs::Status Brufs::Root::open_directory(const Path &path, Directory &dir) {
+    auto status = this->open_directory(ROOT_DIR_INODE_ID, dir);
+    if (status < Status::OK) return status;
+
+    for (const auto &component : path.get_components()) {
+        DirectoryEntry dir_entry;
+        status = dir.look_up(component.c_str(), dir_entry);
+        if (status < Status::OK) return status;
+
+        status = this->open_directory(dir_entry.inode_id, dir);
+        if (status < Status::OK) return status;
+    }
 
     return Status::OK;
 }

@@ -26,6 +26,7 @@
 #include "BmTree/btree-decl.hpp"
 #include "RootHeader.hpp"
 #include "InodeHeader.hpp"
+#include "Path.hpp"
 
 namespace Brufs {
 
@@ -84,6 +85,10 @@ public:
     Status open_inode(const InodeId &id, Inode &inode);
     Status open_file(const InodeId &id, File &file);
     Status open_directory(const InodeId &id, Directory &dir);
+
+    Status open_inode(const Path &path, Inode &inode);
+    Status open_file(const Path &path, File &file);
+    Status open_directory(const Path &path, Directory &dir);
 
     operator const RootHeader &() const {
         return this->header;

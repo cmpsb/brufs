@@ -28,3 +28,4 @@
 #include "String.hpp"
 #include "Seed.hpp"
 #include "BuildInfo.hpp"
+#include "PathParser.hpp"

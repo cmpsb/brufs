@@ -146,6 +146,16 @@ enum [[nodiscard]] Status {
     E_WRONG_INODE_TYPE,
 
     /**
+     * The user expects a directory, but the inode is not a directory.
+     */
+    E_NOT_DIR,
+
+    /**
+     * The user expects a non-directory inode type, but the inode is a directory.
+     */
+    E_IS_DIR,
+
+    /**
      * The path does not contain a root.
      */
     E_NO_ROOT,

@@ -126,8 +126,5 @@ Brufs::InodeId Util::generate_inode_id(char alt) {
     std::mt19937 mt(rd());
     std::uniform_int_distribution<uint64_t> dist;
 
-    const Brufs::InodeId inode_id_low = (dist(mt) & ~0b11'1111) | alt;
-    const Brufs::InodeId inode_id_high = dist(mt);
-
-    return inode_id_high << 64 | inode_id_low;
+    return (static_cast<Brufs::InodeId>(dist(mt)) << 6) | alt;
 }

@@ -86,14 +86,10 @@ Brufs::Status Brufs::File::resize_small_to_big(const Size old_size, const Size n
     memcpy(buf.data(), this->get_data(), old_size);
     memset(buf.data() + old_size, 0, BLOCK_SIZE - old_size);
 
-    InodeExtentTree iet(*this);
-    auto status = iet.init();
-    if (status < Status::OK) return status;
-
     auto &fs = this->get_root().get_fs();
 
     Extent block_extent;
-    status = fs.allocate_blocks(BLOCK_SIZE, block_extent);
+    auto status = fs.allocate_blocks(BLOCK_SIZE, block_extent);
     if (status < Status::OK) return status;
 
     auto sstatus = dwrite(fs.get_disk(), buf.data(), BLOCK_SIZE, block_extent.offset);
@@ -101,7 +97,8 @@ Brufs::Status Brufs::File::resize_small_to_big(const Size old_size, const Size n
 
     this->set_size(new_size);
 
-    status = this->store();
+    InodeExtentTree iet(*this);
+    status = iet.init();
     if (status < Status::OK) return status;
 
     DataExtent data_extent(block_extent, 0);
@@ -134,7 +131,7 @@ Brufs::Status Brufs::File::resize_big_to_big(const Size old_size, const Size new
         status = fs.free_blocks(cur_extent);
         if (status < Status::OK) return status;
 
-        ptr += cur_extent.get_local_end();
+        ptr = cur_extent.get_local_end();
     }
 
     this->set_size(new_size);
@@ -142,8 +139,10 @@ Brufs::Status Brufs::File::resize_big_to_big(const Size old_size, const Size new
     return this->store();
 }
 
-Brufs::SSize Brufs::File::write(const void *buf, Size count, Offset offset) {
+Brufs::SSize Brufs::File::write(const void *vbuf, Size count, Offset offset) {
     if (count == 0) return 0;
+
+    auto buf = static_cast<const char *>(vbuf);
 
     if (offset + count > this->get_size()) {
         auto status = this->truncate(count + offset);
@@ -187,6 +186,7 @@ Brufs::SSize Brufs::File::write(const void *buf, Size count, Offset offset) {
         if (status < Status::OK) return status;
 
         DataExtent new_extent(new_raw_extent, data_extent.local_start);
+
         sstatus = dwrite(fs.get_disk(), small_buf.data(), BLOCK_SIZE, new_extent.offset);
         if (sstatus < 0) return sstatus;
 
@@ -219,6 +219,7 @@ Brufs::SSize Brufs::File::write(const void *buf, Size count, Offset offset) {
     const auto local_offset = offset - aligned_offset;
 
     DataExtent new_extent(raw_new_extent, aligned_offset);
+
     auto sstatus = dwrite(fs.get_disk(), buf, count, new_extent.offset + local_offset);
     if (sstatus < 0) return sstatus;
 
@@ -248,15 +249,12 @@ Brufs::SSize Brufs::File::read(void *vbuf, const Size count, const Offset offset
         return true_count;
     }
 
-    const auto iet_address = this->iet_address();
-    if (iet_address == 0) {
-        memset(vbuf, 0, true_count);
-        return true_count;
-    }
-
     InodeExtentTree iet(*this);
     DataExtent extent;
     const auto status = iet.search(offset, extent);
+
+    Size num_iet_values;
+    iet.count_values(num_iet_values);
 
     if (status == Status::E_NOT_FOUND) {
         memset(vbuf, 0, true_count);
@@ -272,6 +270,7 @@ Brufs::SSize Brufs::File::read(void *vbuf, const Size count, const Offset offset
         memset(vbuf, 0, read_count);
         return read_count;
     }
+
 
     auto &fs = this->get_root().get_fs();
     const auto local_offset = extent.relativize_local(offset);

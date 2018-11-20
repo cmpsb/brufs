@@ -48,7 +48,10 @@ Brufs::SSize FdAbst::write(const void *buf, Brufs::Size count, Brufs::Address of
 }
 
 const char *FdAbst::strstatus(Brufs::SSize eno) const {
-    if (eno < Brufs::E_ABSTIO_BASE) return Brufs::strerror(static_cast<Brufs::Status>(eno));
+    if (eno < Brufs::E_ABSTIO_BASE || eno >= Brufs::Status::OK) {
+        return Brufs::strerror(static_cast<Brufs::Status>(eno));
+    }
+
     return strerror(eno - Brufs::Status::E_ABSTIO_BASE);
 }
 

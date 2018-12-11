@@ -20,15 +20,14 @@
  * SOFTWARE.
  */
 
-#pragma once
+#include "InodeIdGenerator.hpp"
+#include "Timestamp.hpp"
 
-#include "Brufs.hpp"
-#include "Directory.hpp"
-#include "File.hpp"
-#include "String.hpp"
-#include "Seed.hpp"
-#include "BuildInfo.hpp"
-#include "PathParser.hpp"
-#include "InodeHeaderBuilder.hpp"
-#include "EntityCreator.hpp"
-#include "DynamicDirectoryEntry.hpp"
+Brufs::InodeId Brufs::InodeIdGenerator::generate() const {
+    auto now = Timestamp::now();
+
+    InodeId id;
+    id = now.seconds;
+    id <<= 64;
+    return id | now.nanoseconds;
+}

@@ -20,45 +20,43 @@
  * SOFTWARE.
  */
 
-#include <cstdio>
-#include <cstring>
-#include <cerrno>
+#pragma once
 
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <unistd.h>
+#include "Logger.hpp"
 
-#include "libbrufs.hpp"
+#include "Action.hpp"
+#include "BrufsOpener.hpp"
+#include "PathValidator.hpp"
 
-#include "FdAbst.hpp"
+namespace Brufscli {
 
-int init(int argc, char **argv) {
-    if (argc < 2) {
-        fprintf(stderr, "Specify a file.\n");
-        return 2;
-    }
+class CopyOutAction : public Action {
+private:
+    const Slog::Logger &logger;
+    const BrufsOpener &opener;
 
-    int iofd = open(argv[1], O_RDWR);
-    if (iofd == -1) {
-        fprintf(stderr, "Unable to open %s: %s", argv[1], strerror(errno));
-        return 1;
-    }
+    const Brufs::PathParser &path_parser;
+    const PathValidator &path_validator;
 
-    FdAbst io(iofd);
-    Brufs::Disk disk(&io);
-    Brufs::Brufs fs(&disk);
+    std::string spec;
+    std::string out_path;
 
-    Brufs::Header proto;
-    proto.cluster_size_exp = 14;
-    proto.sc_low_mark = 12;
-    proto.sc_high_mark = 24;
+    size_t transfer_buffer_size = 64 * 1024 * 1024;
 
-    Brufs::Status status = fs.init(proto);
+public:
+    CopyOutAction(
+        const Slog::Logger &logger,
+        const BrufsOpener &opener,
+        const Brufs::PathParser &parser,
+        const PathValidator &validator
+    ) :
+        logger(logger), opener(opener), path_parser(parser), path_validator(validator)
+    {}
 
-    fprintf(stderr, "%s\n", Brufs::strerror(status));
+    std::vector<slopt_Option> get_options() const override;
+    std::vector<std::string> get_names() const override;
+    void apply_option(int sw, int snam, const std::string &lnam, const std::string &val) override;
+    int run(const std::string &name) override;
+};
 
-    close(iofd);
-
-    return status != Brufs::Status::OK;
 }

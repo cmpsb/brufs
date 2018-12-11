@@ -27,6 +27,7 @@ const char *Brufs::strerror(Status eno) {
 
     switch (eno) {
         case E_INTERNAL: return "E_INTERNAL";
+        case E_INVALID_ARGUMENT: return "E_INVALID_ARGUMENT";
         case E_NO_MEM: return "E_NO_MEM";
         case E_DISK_TRUNCATED: return "E_DISK_TRUNCATED";
         case E_BAD_MAGIC: return "E_BAD_MAGIC";
@@ -48,6 +49,8 @@ const char *Brufs::strerror(Status eno) {
         case E_BEYOND_EOF: return "E_BEYOND_EOF";
         case E_STOPPED: return "E_STOPPED";
         case E_WRONG_INODE_TYPE: return "E_WRONG_INODE_TYPE";
+        case E_NOT_DIR: return "E_NOT_DIR";
+        case E_IS_DIR: return "E_IS_DIR";
         case E_ABSTIO_BASE: return "E_ABSTIO_BASE";
         case OK: return "OK";
         case RETRY: return "RETRY";

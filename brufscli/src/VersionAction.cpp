@@ -20,9 +20,13 @@
  * SOFTWARE.
  */
 
-#include "libbrufs.hpp"
+#include "VersionAction.hpp"
 
-int version() {
+std::vector<std::string> Brufscli::VersionAction::get_names() const {
+    return {"version"};
+}
+
+int Brufscli::VersionAction::run([[maybe_unused]] const std::string &name) {
     const auto build_info = Brufs::BuildInfo::get();
 
     constexpr unsigned int VERSION_BUFFER_LENGTH = 64;
@@ -37,17 +41,16 @@ int version() {
     if (is_debug && is_release) release_type = "invalid build type: both debug and release";
     if (!is_debug && !is_release) release_type = "invalid build type: neither debug nor release";
 
-    printf("Brufs v%s (%s)\n", version, release_type);
-    printf("Built %s\n", build_info.build_date.c_str());
+    this->logger.info("Brufs v%s (%s)", version, release_type);
+    this->logger.info("Built %s", build_info.build_date.c_str());
 
     const auto is_from_git = build_info.is_from_git();
-    printf("git: %s\n", is_from_git ? "yes" : "no");
+    this->logger.info("git: %s", is_from_git ? "yes" : "no");
     if (is_from_git) {
-        printf("  tag: %s\n  branch: %s\n  commit: %s%s\n",
-            build_info.git_tag.c_str(),
-            build_info.git_branch.c_str(),
-            build_info.git_commit.c_str(),
-            build_info.is_dirty() ? " (DIRTY)" : ""
+        this->logger.info("  tag: %s", build_info.git_tag.c_str());
+        this->logger.info("  branch: %s", build_info.git_branch.c_str());
+        this->logger.info("  commit: %s %s",
+            build_info.git_commit.c_str(), build_info.is_dirty() ? "(DIRTY)" : "(clean)"
         );
     }
 

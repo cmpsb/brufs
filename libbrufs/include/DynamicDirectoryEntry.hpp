@@ -22,9 +22,42 @@
 
 #pragma once
 
-#include <string>
+#include "DirectoryEntry.hpp"
 
-template <typename N>
-N prompt_number(const std::string &qry, const std::string &def, const char *format);
+namespace Brufs {
 
-std::string prompt_string(const std::string &qry, const std::string &def, size_t max_len = 4096);
+/**
+ * A directory entry that uses dynamically-sized storage as opposed to the fixed size approach
+ * of DirectoryEntry.
+ */
+class DynamicDirectoryEntry {
+private:
+    String label;
+    InodeId inode_id;
+
+public:
+    DynamicDirectoryEntry() = default;
+    DynamicDirectoryEntry(const DynamicDirectoryEntry &other) = default;
+
+    DynamicDirectoryEntry(const DirectoryEntry &entry) :
+        label(entry.get_label()), inode_id(entry.inode_id)
+    {}
+
+    DynamicDirectoryEntry(const String &label, const InodeId &inode_id) :
+        label(label), inode_id(inode_id)
+    {}
+
+    const String &get_label() const {
+        return this->label;
+    }
+
+    const InodeId &get_inode_id() const {
+        return this->inode_id;
+    }
+
+    operator DirectoryEntry() const {
+        return {this->label, this->inode_id};
+    }
+};
+
+}

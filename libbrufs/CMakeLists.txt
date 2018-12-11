@@ -13,6 +13,9 @@ set(SOURCE_FILES
     src/Timestamp.cpp
     src/BuildInfo.cpp
     src/PathParser.cpp
+    src/EntityCreator.cpp
+    src/InodeIdGenerator.cpp
+    src/InodeHeaderBuilder.cpp
 )
 
 set(TEST_FILES

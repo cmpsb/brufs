@@ -1,17 +1,18 @@
 set(SOURCE_FILES
-    src/init.cpp
-    src/check.cpp
-    src/add-root.cpp
+    src/Action.cpp
+    src/AddRootAction.cpp
+    src/BrufsOpener.cpp
+    src/CheckAction.cpp
+    src/CopyInAction.cpp
+    src/CopyOutAction.cpp
     src/FdAbst.cpp
-    src/prompt.cpp
-    src/ls.cpp
-    src/mkdir.cpp
-    src/Util.cpp
-    src/touch.cpp
-    src/copy_in.cpp
-    src/copy_out.cpp
-    src/version.cpp
+    src/InitAction.cpp
+    src/LsAction.cpp
     src/PathValidator.cpp
+    src/TouchAction.cpp
+    src/Util.cpp
+    src/VersionAction.cpp
+    src/MkdirAction.cpp
 )
 
 set(TEST_FILES
@@ -20,13 +21,13 @@ set(TEST_FILES
 
 include_directories(${CMAKE_SOURCE_DIR}/libbrufs/include src)
 
-add_executable(brufscli src/main.cpp ${SOURCE_FILES})
-set_target_properties(brufscli PROPERTIES OUTPUT_NAME brufs)
+add_library(brufscli ${SOURCE_FILES})
+target_link_libraries(brufscli brufs slog slopt)
 
-target_link_libraries(brufscli brufs)
+add_executable(brufscli-exe src/main.cpp)
+set_target_properties(brufscli-exe PROPERTIES OUTPUT_NAME brufs)
 
-enable_testing()
+target_link_libraries(brufscli-exe brufscli)
 
-add_executable(test ${SOURCE_FILES} ${TEST_FILES})
-target_link_libraries(test brufs catch)
-add_test(test test)
+add_executable(brufscli-test ${TEST_FILES})
+target_link_libraries(brufscli-test brufscli catch)

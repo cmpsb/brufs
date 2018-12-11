@@ -22,13 +22,43 @@
 
 #pragma once
 
-#include "Brufs.hpp"
-#include "Directory.hpp"
-#include "File.hpp"
-#include "String.hpp"
-#include "Seed.hpp"
-#include "BuildInfo.hpp"
-#include "PathParser.hpp"
-#include "InodeHeaderBuilder.hpp"
-#include "EntityCreator.hpp"
-#include "DynamicDirectoryEntry.hpp"
+#include "Logger.hpp"
+
+#include "Action.hpp"
+#include "BrufsOpener.hpp"
+
+namespace Brufscli {
+
+class InitAction : public Action {
+private:
+    Slog::Logger &logger;
+    const BrufsOpener &opener;
+
+    std::string dev_path;
+
+    uint32_t cluster_size_exp = 14;
+
+    uint8_t sc_low_mark = 12;
+    uint8_t sc_high_mark = 24;
+
+    void validate_cluster_size();
+    void validate_spare_marks();
+
+    uint8_t suggest_sc_low_mark();
+
+public:
+    /**
+     * Constructs a new initialization action.
+     *
+     * @param logger the logger to write information to
+     * @param opener the service to open the filesystem with
+     */
+    InitAction(Slog::Logger &logger, const BrufsOpener &opener) : logger(logger), opener(opener) {}
+
+    std::vector<std::string> get_names() const override;
+    std::vector<slopt_Option> get_options() const override;
+    void apply_option(int sw, int snam, const std::string &lnam, const std::string &value) override;
+    int run(const std::string &name) override;
+};
+
+}

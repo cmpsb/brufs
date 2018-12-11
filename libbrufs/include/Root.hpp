@@ -64,6 +64,10 @@ class Root {
 public:
     Root(Brufs &fs, const RootHeader &hdr);
 
+    // Roots are non-copyable
+    Root(const Root &other) = delete;
+    Root &operator=(const Root &other) = delete;
+
     const RootHeader &get_header() { return this->header; }
 
     Brufs &get_fs() { return this->fs; }

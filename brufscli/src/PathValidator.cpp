@@ -26,7 +26,7 @@ void Brufscli::PathValidator::validate(
     const Brufs::Path &path,
     bool require_partition,
     bool require_root
-) {
+) const {
     if (require_partition && !path.has_partition()) {
         throw NoPartitionException(
             "The path does not contain a partition (file, block device, etc.) "

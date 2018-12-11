@@ -87,6 +87,10 @@ public:
         return Vector::get_size() - 1;
     }
 
+    Size length() const {
+        return this->size();
+    }
+
     String operator+(const String &other) const {
         String copy(*this);
 

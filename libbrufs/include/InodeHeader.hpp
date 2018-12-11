@@ -32,8 +32,18 @@
 
 namespace Brufs {
 
+/**
+ * Settings for inodes.
+ *
+ * The values in this enum are the bit positions of the flags; one can, for example, set the
+ * ZERO_AT_DELETION flag as follows:
+ *
+ * \code{.cpp}
+ * inode_header.flags = (1 << ZERO_AT_DELETION);
+ * \endcode
+ */
 enum InodeFlag {
-    FIXED_SIZE_CLASS,
+    NO_SPARSE,
     ZERO_AT_DELETION
 };
 
@@ -64,14 +74,6 @@ struct InodeHeader {
     OwnerId group;
 
     /**
-     * The file access mode.
-     */
-    uint16_t mode;
-
-    uint16_t reserved16;
-    uint32_t reserved32;
-
-    /**
      * The number of hard links referencing this inode
      */
     uint16_t num_links;
@@ -89,9 +91,9 @@ struct InodeHeader {
     uint16_t flags;
 
     /**
-     * The number of extents stored in this inode's data area.
+     * The file access mode.
      */
-    uint16_t num_extents;
+    uint16_t mode;
 
     /**
      * The size of the file in bytes

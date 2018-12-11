@@ -253,9 +253,6 @@ Brufs::SSize Brufs::File::read(void *vbuf, const Size count, const Offset offset
     DataExtent extent;
     const auto status = iet.search(offset, extent);
 
-    Size num_iet_values;
-    iet.count_values(num_iet_values);
-
     if (status == Status::E_NOT_FOUND) {
         memset(vbuf, 0, true_count);
         return true_count;
@@ -270,7 +267,6 @@ Brufs::SSize Brufs::File::read(void *vbuf, const Size count, const Offset offset
         memset(vbuf, 0, read_count);
         return read_count;
     }
-
 
     auto &fs = this->get_root().get_fs();
     const auto local_offset = extent.relativize_local(offset);

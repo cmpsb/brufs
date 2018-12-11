@@ -20,49 +20,55 @@
  * SOFTWARE.
  */
 
-#pragma once
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 
 #include <stdexcept>
 
-#include "libbrufs.hpp"
+#include "FdAbst.hpp"
+#include "BrufsOpener.hpp"
 
 namespace Brufscli {
 
-class PathValidationException : public std::runtime_error {
-public:
+class BadBrufsException : public std::runtime_error {
     using std::runtime_error::runtime_error;
 };
 
-class NoPartitionException : public PathValidationException {
-public:
-    using PathValidationException::PathValidationException;
-};
+}
 
-class NoRootException : public PathValidationException {
-public:
-    using PathValidationException::PathValidationException;
-};
+Brufscli::BrufsInstance Brufscli::BrufsOpener::open(const std::string &path) const {
+    int iofd = ::open(path.c_str(), O_RDWR);
+    if (iofd == -1) {
+        throw std::runtime_error("Unable to open " + path + ": " + strerror(errno));
+    }
 
-/**
- * A validator for user-generated paths.
- */
-class PathValidator {
-public:
-    /**
-     * Validates a given path.
-     *
-     * @param path the path to validate
-     * @param require_partition if true, assert that the path contains a partition
-     * @param require_root if true, assert that the path contains a root
-     *
-     * @throws NoPartitionException if require_partition is true and the path has no partition
-     * @throws NoRootException if require_root is true and the path has no root
-     */
-    virtual void validate(
-        const Brufs::Path &path,
-        bool require_partition = true,
-        bool require_root = true
-    ) const;
-};
+    auto io = new FdAbst(iofd);
+    auto disk = new Brufs::Disk(io);
+    auto fs = new Brufs::Brufs(disk);
 
+    return BrufsInstance(
+        std::shared_ptr<Brufs::Brufs>(fs),
+        std::shared_ptr<Brufs::Disk>(disk),
+        std::shared_ptr<FdAbst>(io)
+    );
+}
+
+Brufscli::BrufsInstance Brufscli::BrufsOpener::open_new(const std::string &path) const {
+    return this->open(path);
+}
+
+Brufscli::BrufsInstance Brufscli::BrufsOpener::open_existing(const std::string &path) const {
+    auto instance = this->open(path);
+
+    auto &io = instance.get_io();
+    auto &fs = instance.get_fs();
+    auto status = fs.get_status();
+    if (status < Brufs::Status::OK) {
+        throw BadBrufsException(
+            "Unable to load a filesystem from " + path + ": " + io.strstatus(status)
+        );
+    }
+
+    return instance;
 }

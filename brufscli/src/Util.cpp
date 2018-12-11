@@ -23,6 +23,7 @@
 #include <cmath>
 #include <cstring>
 
+#include <stdexcept>
 #include <random>
 
 #include "libbrufs.hpp"

@@ -32,6 +32,8 @@ bool equiv_values(const DirectoryEntry *current, const DirectoryEntry *replaceme
 }}
 
 Brufs::Status Brufs::Directory::init(const InodeId &id, const InodeHeader *hdr) {
+    this->enable_store = false;
+
     auto status = Inode::init(id, hdr);
     if (status < Status::OK) return status;
 
@@ -39,7 +41,8 @@ Brufs::Status Brufs::Directory::init(const InodeId &id, const InodeHeader *hdr) 
     status = entries.init();
     if (status < Status::OK) return status;
 
-    return this->store();
+    this->enable_store = true;
+    return Status::OK;
 }
 
 Brufs::Status Brufs::Directory::destroy() {

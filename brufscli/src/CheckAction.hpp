@@ -22,13 +22,37 @@
 
 #pragma once
 
-#include "Brufs.hpp"
-#include "Directory.hpp"
-#include "File.hpp"
-#include "String.hpp"
-#include "Seed.hpp"
-#include "BuildInfo.hpp"
-#include "PathParser.hpp"
-#include "InodeHeaderBuilder.hpp"
-#include "EntityCreator.hpp"
-#include "DynamicDirectoryEntry.hpp"
+#include "Logger.hpp"
+
+#include "Action.hpp"
+#include "BrufsOpener.hpp"
+#include "PathValidator.hpp"
+
+namespace Brufscli {
+
+class CheckAction : public Action {
+private:
+    Slog::Logger &logger;
+    const BrufsOpener &opener;
+
+    const Brufs::PathParser &path_parser;
+    const PathValidator &path_validator;
+
+    std::string spec;
+
+public:
+    CheckAction(
+        Slog::Logger &logger, 
+        const BrufsOpener &opener,
+        const Brufs::PathParser &path_parser, 
+        const PathValidator &path_validator
+    ) :
+        logger(logger), opener(opener), path_parser(path_parser), path_validator(path_validator)
+    {}
+
+    std::vector<std::string> get_names() const override;
+    void apply_option(int sw, int snam, const std::string &lnam, const std::string &value) override;
+    int run(const std::string &name) override;
+};
+
+}

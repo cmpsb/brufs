@@ -60,6 +60,8 @@ private:
 
     friend FileEntryTree;
 
+    bool enable_store = true;
+
 public:
     using Inode::Inode;
     Directory(const Inode &other) : Inode(other) {}
@@ -78,6 +80,13 @@ public:
     Status look_up(const char *name, DirectoryEntry &target);
 
     Status insert(const DirectoryEntry &entry);
+    Status insert(const String &label, InodeId id) {
+        DirectoryEntry entry;
+        entry.set_label(label);
+        entry.inode_id = id;
+
+        return this->insert(entry);
+    }
 
     Status update(const DirectoryEntry &entry);
 
@@ -104,7 +113,9 @@ inline FileEntryTree::FileEntryTree(Directory &dir) :
 
 inline Status FileEntryTree::on_root_change(Address new_addr) {
     this->dir.det_address() = new_addr;
-    return this->dir.store();
+
+    if (this->dir.enable_store) return this->dir.store();
+    else return Status::NOT_STORED;
 }
 
 }

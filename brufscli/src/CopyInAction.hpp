@@ -22,47 +22,48 @@
 
 #pragma once
 
-#include <stdexcept>
+#include "Logger.hpp"
 
-#include "libbrufs.hpp"
+#include "Action.hpp"
+#include "BrufsOpener.hpp"
+#include "PathValidator.hpp"
 
 namespace Brufscli {
 
-class PathValidationException : public std::runtime_error {
-public:
-    using std::runtime_error::runtime_error;
-};
+class CopyInAction : public Action {
+private:
+    const Slog::Logger &logger;
 
-class NoPartitionException : public PathValidationException {
-public:
-    using PathValidationException::PathValidationException;
-};
+    const BrufsOpener &opener;
+    const Brufs::EntityCreator &creator;
 
-class NoRootException : public PathValidationException {
-public:
-    using PathValidationException::PathValidationException;
-};
+    const Brufs::PathParser &path_parser;
+    const PathValidator &path_validator;
 
-/**
- * A validator for user-generated paths.
- */
-class PathValidator {
+    std::string spec;
+    std::string in_path;
+
+    bool create = false;
+    Brufs::InodeHeaderBuilder inode_header_builder;
+    size_t transfer_buffer_size = 64 * 1024 * 1024;
+
 public:
-    /**
-     * Validates a given path.
-     *
-     * @param path the path to validate
-     * @param require_partition if true, assert that the path contains a partition
-     * @param require_root if true, assert that the path contains a root
-     *
-     * @throws NoPartitionException if require_partition is true and the path has no partition
-     * @throws NoRootException if require_root is true and the path has no root
-     */
-    virtual void validate(
-        const Brufs::Path &path,
-        bool require_partition = true,
-        bool require_root = true
-    ) const;
+    CopyInAction(
+        const Slog::Logger &logger,
+        const BrufsOpener &opener,
+        const Brufs::EntityCreator &creator,
+        const Brufs::PathParser &path_parser,
+        const PathValidator &path_validator
+    ) :
+        logger(logger),
+        opener(opener), creator(creator),
+        path_parser(path_parser), path_validator(path_validator)
+    {}
+
+    std::vector<std::string> get_names() const override;
+    std::vector<slopt_Option> get_options() const override;
+    void apply_option(int sw, int snam, const std::string &lnam, const std::string &value) override;
+    int run(const std::string &name) override;
 };
 
 }

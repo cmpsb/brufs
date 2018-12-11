@@ -413,7 +413,6 @@ static void on_mkdir(fuse_req_t req, fuse_ino_t parent, const char *name, mode_t
     rdh->num_links = 1;
     rdh->type = Brufs::InodeType::DIRECTORY;
     rdh->flags = 0;
-    rdh->num_extents = 0;
     rdh->file_size = 0;
     rdh->checksum = 0;
     rdh->mode = mode;
@@ -497,7 +496,6 @@ static void on_mknod(fuse_req_t req, fuse_ino_t parent, const char *name, mode_t
     rdh->num_links = 1;
     rdh->type = Brufs::InodeType::FILE;
     rdh->flags = 0;
-    rdh->num_extents = 0;
     rdh->file_size = 0;
     rdh->checksum = 0;
     rdh->mode = mode;

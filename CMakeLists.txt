@@ -60,7 +60,10 @@ set(BRUFS_VERSION_MAJOR ${PROJECT_VERSION_MAJOR})
 set(BRUFS_VERSION_MINOR ${PROJECT_VERSION_MINOR})
 set(BRUFS_VERSION_PATCH ${PROJECT_VERSION_PATCH})
 
+add_subdirectory(lib/slog)
+add_subdirectory(lib/slopt)
+add_subdirectory(lib/catch)
+
 add_subdirectory(libbrufs)
 add_subdirectory(brufscli)
 add_subdirectory(brufuse)
-add_subdirectory(lib/catch)

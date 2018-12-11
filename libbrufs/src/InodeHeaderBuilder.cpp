@@ -20,15 +20,20 @@
  * SOFTWARE.
  */
 
-#pragma once
-
-#include "Brufs.hpp"
-#include "Directory.hpp"
-#include "File.hpp"
-#include "String.hpp"
-#include "Seed.hpp"
-#include "BuildInfo.hpp"
-#include "PathParser.hpp"
 #include "InodeHeaderBuilder.hpp"
-#include "EntityCreator.hpp"
-#include "DynamicDirectoryEntry.hpp"
+
+Brufs::InodeHeader Brufs::InodeHeaderBuilder::build(const Brufs::InodeHeader &def) const {
+    Brufs::InodeHeader ret;
+
+    ret.created = this->created_set ? this->proto.created : def.created;
+    ret.last_modified = this->last_modified_set ? this->proto.last_modified : def.last_modified;
+    ret.owner = this->owner_set ? this->proto.owner : def.owner;
+    ret.group = this->group_set ? this->proto.group : def.group;
+    ret.num_links = this->num_links_set ? this->proto.num_links : def.num_links;
+    ret.type = this->type_set ? this->proto.type : def.type;
+    ret.flags = this->flags_set ? this->proto.flags : def.flags;
+    ret.mode = this->mode_set ? this->proto.mode : def.mode;
+    ret.file_size = this->file_size_set ? this->proto.file_size : def.file_size;
+
+    return ret;
+}

@@ -21,18 +21,25 @@
  */
 
 #include <cstdio>
+
+#include <map>
+#include <random>
 #include <string>
 
-int init(int, char **);
-int check(int, char **);
-int help(int, char **);
-int add_root(int, char **);
-int ls(int, char **);
-int mkdir(int, char **);
-int touch(int, char **);
-int copy_in(int, char **);
-int copy_out(int, char **);
-int version();
+#include "Logger.hpp"
+
+#include "InodeIdGenerator.hpp"
+#include "AddRootAction.hpp"
+#include "CheckAction.hpp"
+#include "CopyInAction.hpp"
+#include "CopyOutAction.hpp"
+#include "InitAction.hpp"
+#include "LsAction.hpp"
+#include "MkdirAction.hpp"
+#include "TouchAction.hpp"
+#include "VersionAction.hpp"
+
+using namespace Brufscli;
 
 static void print_usage(const char *pname) {
     fprintf(stderr,
@@ -46,39 +53,53 @@ static void print_usage(const char *pname) {
 }
 
 int main(int argc, char **argv) {
+    Slog::Logger logger("brufs", Slog::Level::TRACE);
+    const Brufs::PathParser path_parser;
+    const Brufscli::PathValidator path_validator;
+    const Brufscli::BrufsOpener brufs_opener;
+    const Brufscli::InodeIdGenerator inode_id_generator;
+    const Brufs::EntityCreator entity_creator(inode_id_generator);
+
+    std::vector<std::shared_ptr<Brufscli::Action>> actions = {
+        std::make_shared<AddRootAction>(logger, brufs_opener, path_parser, path_validator),
+        std::make_shared<CheckAction>(logger, brufs_opener, path_parser, path_validator),
+        std::make_shared<CopyInAction>(
+            logger, brufs_opener, entity_creator, path_parser, path_validator
+        ),
+        std::make_shared<CopyOutAction>(logger, brufs_opener, path_parser, path_validator),
+        std::make_shared<InitAction>(logger, brufs_opener),
+        std::make_shared<LsAction>(logger, brufs_opener, path_parser, path_validator),
+        std::make_shared<MkdirAction>(
+            logger, brufs_opener, entity_creator, path_parser, path_validator
+        ),
+        std::make_shared<TouchAction>(
+            logger, brufs_opener, entity_creator, path_parser, path_validator
+        ),
+        std::make_shared<VersionAction>(logger)
+    };
+
+    std::map<std::string, std::shared_ptr<Brufscli::Action>> actions_by_name;
+
+    for (const auto &action : actions) {
+        for (const auto &name : action->get_names()) {
+            actions_by_name[name] = action;
+        }
+    }
+
     if (argc == 1) {
-        fprintf(stderr, "Insufficient number of arguments\n");
+        logger.error("Insufficient number of arguments");
         print_usage(argv[0]);
 
         return 1;
     }
 
-    std::string action = argv[1];
+    const std::string action = argv[1];
+    if (actions_by_name.find(action) == actions_by_name.end()) {
+        logger.error("Unknown action %s", action.c_str());
+        print_usage(argv[0]);
 
-    if (action == "init") {
-        return init(argc - 1, argv + 1);
-    } else if (action == "check") {
-        return check(argc - 1, argv + 1);
-    } else if (action == "add-root") {
-        return add_root(argc - 1, argv + 1);
-    } else if (action == "ls") {
-        return ls(argc - 1, argv + 1);
-    } else if (action == "mkdir") {
-        return mkdir(argc - 1, argv + 1);
-    } else if (action == "touch") {
-        return touch(argc - 1, argv + 1);
-    } else if (action == "copy-in") {
-        return copy_in(argc - 1, argv + 1);
-    } else if (action == "copy-out" || action == "cat") {
-        return copy_out(argc - 1, argv + 1);
-    } else if (action == "version") {
-        return version();
-    // } else if (action == "help") {
-    //     return help(argc - 1, argv + 1);
+        return 1;
     }
 
-    fprintf(stderr, "Unknown action %s\n", argv[1]);
-    print_usage(argv[0]);
-
-    return 1;
+    return actions_by_name[action]->run(argc - 1, argv + 1);
 }

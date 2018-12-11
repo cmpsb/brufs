@@ -50,6 +50,12 @@ struct DirectoryEntry {
 
     InodeId inode_id;
 
+    DirectoryEntry() = default;
+
+    DirectoryEntry(const String &label, const InodeId &id) : inode_id(id) {
+        this->set_label(label);
+    }
+
     void set_label(const String &label) {
         strncpy(this->label, label.c_str(), MAX_LABEL_LENGTH);
     }

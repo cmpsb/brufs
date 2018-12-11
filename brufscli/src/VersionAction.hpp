@@ -22,13 +22,21 @@
 
 #pragma once
 
-#include "Brufs.hpp"
-#include "Directory.hpp"
-#include "File.hpp"
-#include "String.hpp"
-#include "Seed.hpp"
-#include "BuildInfo.hpp"
-#include "PathParser.hpp"
-#include "InodeHeaderBuilder.hpp"
-#include "EntityCreator.hpp"
-#include "DynamicDirectoryEntry.hpp"
+#include "Logger.hpp"
+
+#include "Action.hpp"
+
+namespace Brufscli {
+
+class VersionAction : public Action {
+private:
+    const Slog::Logger &logger;
+
+public:
+    explicit VersionAction(const Slog::Logger &logger) : logger(logger) {}
+
+    std::vector<std::string> get_names() const override;
+    int run(const std::string &name) override;
+};
+
+}

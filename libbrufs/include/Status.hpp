@@ -179,7 +179,13 @@ enum [[nodiscard]] Status {
     /**
      * A request to stop calling that function.
      */
-    STOP
+    STOP,
+
+    /**
+     * A reminder that the function disabled automatic storage of the object and a manual update
+     * is required.
+     */
+    NOT_STORED
 };
 
 const char *strerror(Status eno);

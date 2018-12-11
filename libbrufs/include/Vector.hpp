@@ -66,6 +66,11 @@ public:
         }
     }
 
+    template <typename I>
+    Vector(I first, I last) : Vector() {
+        for (I ptr = first; !(ptr == last); ++ptr) this->push_back(*ptr);
+    }
+
     ~Vector() {
         this->clear();
         free(this->vptr);

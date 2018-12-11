@@ -22,13 +22,13 @@
 
 #pragma once
 
-#include "Brufs.hpp"
-#include "Directory.hpp"
-#include "File.hpp"
-#include "String.hpp"
-#include "Seed.hpp"
-#include "BuildInfo.hpp"
-#include "PathParser.hpp"
-#include "InodeHeaderBuilder.hpp"
-#include "EntityCreator.hpp"
-#include "DynamicDirectoryEntry.hpp"
+#include "types.hpp"
+
+namespace Brufs {
+
+class InodeIdGenerator {
+public:
+    virtual InodeId generate() const;
+};
+
+}

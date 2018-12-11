@@ -14,7 +14,7 @@ test-debug:
     - make -j8
     - brufscli/brufs version
     - libbrufs/test_all
-    - brufscli/test
+    - brufscli/brufscli-test
     - gcovr -sbr .. --exclude '.*catch.hpp$' --exclude '.*xxhash.*' --exclude '.*libbrufs/test.*' -o /dev/null
 
 test-release:
@@ -28,4 +28,4 @@ test-release:
     - make -j8
     - brufscli/brufs version
     - libbrufs/test_all
-    - brufscli/test
+    - brufscli/brufscli-test

@@ -45,14 +45,49 @@ Brufs::Root::Root(Brufs &fs, const RootHeader &hdr) :
     this->ait.set_value_size(this->header.inode_size);
 }
 
-Brufs::Status Brufs::Root::init() {
+Brufs::Status Brufs::Root::init(const InodeHeaderBuilder &ihb) {
+    this->enable_store = false;
+
+    // Initialize the core datastructures
     this->it.set_value_size(this->header.inode_size);
     this->ait.set_value_size(this->header.inode_size);
 
     auto status = this->it.init();
     if (status < Status::OK) return status;
 
-    return this->ait.init();
+    status = this->ait.init();
+    if (status < Status::OK) return status;
+
+    // Create a root directory
+    InodeHeader drdh;
+    drdh.created = drdh.last_modified = Timestamp::now();
+    drdh.owner = drdh.group = 0;
+    drdh.num_links = 1;
+    drdh.type = InodeType::DIRECTORY;
+    drdh.flags = 0;
+    drdh.mode = 0755;
+    drdh.file_size = 0;
+    drdh.checksum = 0;
+
+    Directory root_dir(*this);
+
+    auto rdh = ihb.build(drdh);
+    memcpy(root_dir.get_header(), &rdh, sizeof(InodeHeader));
+
+    status = root_dir.init(ROOT_DIR_INODE_ID, root_dir.get_header());
+    if (status < Status::OK) return status;
+
+    status = this->insert_inode(ROOT_DIR_INODE_ID, root_dir.get_header());
+    if (status < Status::OK) return status;
+
+    status = root_dir.insert(".", ROOT_DIR_INODE_ID);
+    if (status < Status::OK) return status;
+
+    status = root_dir.insert("..", ROOT_DIR_INODE_ID);
+    if (status < Status::OK) return status;
+
+    this->enable_store = true;
+    return Status::OK;
 }
 
 Brufs::InodeHeader *Brufs::Root::create_inode_header() const {

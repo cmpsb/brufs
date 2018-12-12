@@ -27,6 +27,7 @@
 #include "RootHeader.hpp"
 #include "InodeHeader.hpp"
 #include "Path.hpp"
+#include "InodeHeaderBuilder.hpp"
 
 namespace Brufs {
 
@@ -57,9 +58,9 @@ class Root {
     InoTree it;
     InoTree ait;
 
-    Status store();
-
     friend InoTree;
+
+    bool enable_store = true;
 
 public:
     Root(Brufs &fs, const RootHeader &hdr);
@@ -76,7 +77,8 @@ public:
         return this->header;
     }
 
-    Status init();
+    Status init(const InodeHeaderBuilder &ihb);
+    Status store();
 
     InodeHeader *create_inode_header() const;
     void destroy_inode_header(InodeHeader *header) const;

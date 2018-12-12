@@ -162,34 +162,15 @@ int Brufscli::AddRootAction::run([[maybe_unused]] const std::string &name) {
     auto status = fs.add_root(root);
     this->on_error(status, "Unable to insert the root into the filesystem: ", io);
 
-    status = root.init();
+    status = root.init(Brufs::InodeHeaderBuilder()
+        .with_mode(this->mode)
+        .with_owner(this->owner)
+        .with_group(this->group)
+    );
     this->on_error(status, "Unable to initialize the root: ", io);
 
-    // Create the root's actual directory
-    Brufs::Directory root_dir(root);
-    auto rdh = root_dir.get_header();
-    rdh->created = rdh->last_modified = Brufs::Timestamp::now();
-    rdh->owner = this->owner;
-    rdh->group = this->group;
-    rdh->num_links = 1;
-    rdh->type = Brufs::InodeType::DIRECTORY;
-    rdh->flags = 0;
-    rdh->file_size = 0;
-    rdh->checksum = 0;
-    rdh->mode = this->mode;
-
-    status = root_dir.init(Brufs::ROOT_DIR_INODE_ID, rdh);
-    this->on_error(status, "Unable to initialize the root directory: ", io);
-
-    status = root.insert_inode(Brufs::ROOT_DIR_INODE_ID, rdh);
-    this->on_error(status, "Unable to insert the root directory into the root: ", io);
-
-    // Create the . and .. links
-    status = root_dir.insert(".", Brufs::ROOT_DIR_INODE_ID);
-    this->on_error(status, "Unable to insert the . entry of the root directory: ", io);
-
-    status = root_dir.insert("..", Brufs::ROOT_DIR_INODE_ID);
-    this->on_error(status, "Unable to insert the .. entry of the root directory: ", io);
+    status = root.store();
+    this->on_error(status, "Unable to store the new root: ", io);
 
     return 0;
 }

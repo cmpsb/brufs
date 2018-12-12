@@ -29,6 +29,7 @@ set(TEST_FILES
     test/PathParser.cpp
     test/Path.cpp
     test/BrufsInit.cpp
+    test/Root.cpp
 )
 
 configure_file(cmake/config.hpp.in config.hpp)

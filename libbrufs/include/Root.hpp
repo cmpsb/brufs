@@ -77,7 +77,7 @@ public:
         return this->header;
     }
 
-    Status init(const InodeHeaderBuilder &ihb);
+    Status init(const InodeHeaderBuilder &ihb = InodeHeaderBuilder());
     Status store();
 
     InodeHeader *create_inode_header() const;

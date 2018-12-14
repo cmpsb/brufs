@@ -43,7 +43,7 @@ TEST_CASE("Brufs initialization", "[lib]") {
     }
 
     SECTION("Tiny init fails with very small disk") {
-        mem_io.resize(10 * 4024);
+        mem_io.resize(10 * 4096);
         auto status = fs.init(proto);
         CHECK(status != Brufs::Status::OK);
     }

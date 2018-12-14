@@ -62,4 +62,11 @@ TEST_CASE("Can add roots", "[Root]") {
         REQUIRE(fs.find_root("root-name", loaded_header) == Brufs::Status::OK);
         REQUIRE(loaded_header == root_header);
     }
+
+    SECTION("Can't add a root that already exists") {
+        Brufs::Root root(fs, root_header);
+        REQUIRE(root.init() == Brufs::Status::OK);
+        REQUIRE(fs.add_root(root) == Brufs::Status::OK);
+        REQUIRE(fs.add_root(root) == Brufs::Status::E_EXISTS);
+    }
 }

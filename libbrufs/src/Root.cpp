@@ -33,6 +33,7 @@ static bool is_main_stream(const Brufs::InodeId &id) {
 }
 
 Brufs::Status Brufs::Root::store() {
+    if (!this->enable_store) return Status::OK;
     return this->fs.update_root(this->header);
 }
 

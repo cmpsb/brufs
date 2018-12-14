@@ -76,6 +76,10 @@ struct RootHeader {
     uint64_t ait_address = 0;
 
     Hash hash(const Hash seed = 14616742) const;
+
+    bool operator==(const RootHeader &other) const {
+        return memcmp(this, &other, sizeof(RootHeader));
+    }
 };
 static_assert(std::is_standard_layout<RootHeader>::value, "the root structure must be standard-layout");
 static_assert(sizeof(RootHeader) <= 512, "a root entry should fit in a block");

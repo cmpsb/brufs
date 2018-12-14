@@ -49,9 +49,17 @@ TEST_CASE("Can add roots", "[Root]") {
 
     SECTION("Can add a root") {
         Brufs::Root root(fs, root_header);
+        REQUIRE(root.init() == Brufs::Status::OK);
+        REQUIRE(fs.add_root(root) == Brufs::Status::OK);
+    }
+
+    SECTION("Can add a root and query it again") {
+        Brufs::Root root(fs, root_header);
+        REQUIRE(root.init() == Brufs::Status::OK);
         REQUIRE(fs.add_root(root) == Brufs::Status::OK);
 
-        REQUIRE(root.init() == Brufs::Status::OK);
-        REQUIRE(root.store() == Brufs::Status::OK);
+        Brufs::RootHeader loaded_header;
+        REQUIRE(fs.find_root("root-name", loaded_header) == Brufs::Status::OK);
+        REQUIRE(loaded_header == root_header);
     }
 }

@@ -86,5 +86,18 @@ TEST_CASE("Can add, query, update, and remove inodes", "[Inode]") {
         );
     }
 
+    SECTION("Can update an inode") {
+        REQUIRE(root.insert_inode(INODE_ID, inode) == Brufs::Status::OK);
+
+        inode.get_header()->group = 1111;
+        REQUIRE(root.update_inode(INODE_ID, inode) == Brufs::Status::OK);
+
+        Brufs::Inode found_inode(root);
+        REQUIRE(root.find_inode(INODE_ID, found_inode) == Brufs::Status::OK);
+        REQUIRE(
+            memcmp(inode.get_header(), found_inode.get_header(), sizeof(Brufs::InodeHeader)) == 0
+        );
+    }
+
     root.destroy_inode_header(inode_header);
 }

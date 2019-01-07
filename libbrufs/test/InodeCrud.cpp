@@ -31,7 +31,7 @@
 static constexpr size_t NORMAL_DISK_SIZE = 32 * 1024 * 1024;
 static constexpr Brufs::InodeId INODE_ID = 65536;
 
-TEST_CASE("Can add and remove inodes", "[Inode]") {
+TEST_CASE("Can add, query, update, and remove inodes", "[Inode]") {
     MemIO mem_io(NORMAL_DISK_SIZE);
     Brufs::Disk disk(&mem_io);
     Brufs::Brufs fs(&disk);
@@ -65,17 +65,23 @@ TEST_CASE("Can add and remove inodes", "[Inode]") {
     inode_header->file_size = 0xF00F;
     inode_header->checksum = 0;
 
+    Brufs::Inode inode(root);
+    REQUIRE(inode.init(INODE_ID, inode_header) == Brufs::Status::OK);
+
     SECTION("Can add an inode") {
-        Brufs::Inode inode(root);
-        REQUIRE(inode.init(INODE_ID, inode_header) == Brufs::Status::OK);
         REQUIRE(root.insert_inode(INODE_ID, inode) == Brufs::Status::OK);
     }
 
     SECTION("Can't add an inode that already exists") {
-        Brufs::Inode inode(root);
-        REQUIRE(inode.init(INODE_ID, inode_header) == Brufs::Status::OK);
         REQUIRE(root.insert_inode(INODE_ID, inode) == Brufs::Status::OK);
         REQUIRE(root.insert_inode(INODE_ID, inode) == Brufs::Status::E_EXISTS);
+    }
+
+    SECTION("Can add an inode and look it up again") {
+        Brufs::Inode found_inode(root);
+        REQUIRE(root.insert_inode(INODE_ID, inode) == Brufs::Status::OK);
+        REQUIRE(root.find_inode(INODE_ID, found_inode) == Brufs::Status::OK);
+        REQUIRE(memcmp(inode.get_header(), found_inode.get_header(), sizeof(Brufs::InodeHeader)) == 0);
     }
 
     root.destroy_inode_header(inode_header);

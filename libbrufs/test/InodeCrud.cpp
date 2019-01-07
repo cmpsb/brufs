@@ -99,5 +99,19 @@ TEST_CASE("Can add, query, update, and remove inodes", "[Inode]") {
         );
     }
 
+    SECTION("Can't update an inode that does not exist") {
+        REQUIRE(root.update_inode(INODE_ID, inode) == Brufs::Status::E_NOT_FOUND);
+    }
+
+    SECTION("Can't remove an inode that does not exist") {
+        REQUIRE(root.update_inode(INODE_ID, inode) == Brufs::Status::E_NOT_FOUND);
+    }
+
+    SECTION("Can remove an inode") {
+        REQUIRE(root.insert_inode(INODE_ID, inode) == Brufs::Status::OK);
+        REQUIRE(root.remove_inode(INODE_ID, inode) == Brufs::Status::OK);
+        REQUIRE(root.find_inode(INODE_ID, inode) == Brufs::Status::E_NOT_FOUND);
+    }
+
     root.destroy_inode_header(inode_header);
 }

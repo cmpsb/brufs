@@ -30,6 +30,7 @@ set(TEST_FILES
     test/Path.cpp
     test/BrufsInit.cpp
     test/Root.cpp
+    test/Inode.cpp
 )
 
 configure_file(cmake/config.hpp.in config.hpp)

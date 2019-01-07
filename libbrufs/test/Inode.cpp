@@ -56,14 +56,14 @@ TEST_CASE("Can add and remove inodes", "[Inode]") {
     auto inode_header = root.create_inode_header();
     REQUIRE(inode_header != nullptr);
 
-    inode_header.created = inode_header.last_modified = Brufs::Timestamp::now();
-    inode_header.owner = inode_header.group = 1000;
-    inode_header.num_links = 2;
-    inode_header.type = Brufs::InodeType::FILE;
-    inode_header.flags = 0;
-    inode_header.mode = 0644;
-    inode_header.file_size = 0xF00F;
-    inode_header.checksum = 0;
+    inode_header->created = inode_header->last_modified = Brufs::Timestamp::now();
+    inode_header->owner = inode_header->group = 1000;
+    inode_header->num_links = 2;
+    inode_header->type = Brufs::InodeType::FILE;
+    inode_header->flags = 0;
+    inode_header->mode = 0644;
+    inode_header->file_size = 0xF00F;
+    inode_header->checksum = 0;
 
     SECTION("Can add an inode") {
         Brufs::Inode inode(root);
@@ -77,4 +77,6 @@ TEST_CASE("Can add and remove inodes", "[Inode]") {
         REQUIRE(root.insert_inode(INODE_ID, inode) == Brufs::Status::OK);
         REQUIRE(root.insert_inode(INODE_ID, inode) == Brufs::Status::E_EXISTS);
     }
+
+    root.destroy_inode_header(inode_header);
 }

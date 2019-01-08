@@ -339,11 +339,3 @@ Brufs::Status Brufs::Brufs::add_root(const RootHeader &rt) {
 Brufs::Status Brufs::Brufs::update_root(const RootHeader &rt) {
     return this->rht.update(rt.hash(), rt);
 }
-
-Brufs::Hash Brufs::RootHeader::hash(const Hash seed) const {
-    char lbl[MAX_LABEL_LENGTH + 1];
-    memcpy(lbl, this->label, MAX_LABEL_LENGTH);
-    lbl[MAX_LABEL_LENGTH] = 0;
-
-    return XXH64(this->label, strlen(lbl), seed);
-}

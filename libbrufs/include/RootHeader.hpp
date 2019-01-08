@@ -27,6 +27,8 @@
 
 #include "types.hpp"
 #include "DirectoryEntry.hpp"
+#include "String.hpp"
+#include "InodeHeader.hpp"
 
 namespace Brufs {
 
@@ -58,12 +60,12 @@ struct RootHeader {
     /**
      * The size of just the inode header.
      */
-    uint16_t inode_header_size = 128;
+    uint16_t inode_header_size = sizeof(InodeHeader);
 
     /**
      * The maximum length of a single extent in an IET.
      */
-    uint32_t max_extent_length = 1024 * 1024;
+    uint32_t max_extent_length = 16 * 4096;
 
     /**
      * The offset the principal inode tree resides at.
@@ -76,6 +78,8 @@ struct RootHeader {
     uint64_t ait_address = 0;
 
     Hash hash(const Hash seed = 14616742) const;
+
+    void set_label(const String &label);
 
     bool operator==(const RootHeader &other) const {
         return memcmp(this, &other, sizeof(RootHeader));

@@ -16,6 +16,7 @@ set(SOURCE_FILES
     src/EntityCreator.cpp
     src/InodeIdGenerator.cpp
     src/InodeHeaderBuilder.cpp
+    src/RootHeader.cpp
 )
 
 set(TEST_FILES
@@ -31,6 +32,7 @@ set(TEST_FILES
     test/BrufsInit.cpp
     test/Root.cpp
     test/InodeCrud.cpp
+    test/EntityCreator.cpp
 )
 
 configure_file(cmake/config.hpp.in config.hpp)

@@ -27,6 +27,8 @@
 namespace Brufuse {
 
 class Util {
+private:
+    static Brufs::PrettyPrint pretty_print;
 public:
     static Brufs::String pretty_print_bytes(__uint128_t bytes);
 

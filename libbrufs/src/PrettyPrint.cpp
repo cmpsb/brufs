@@ -27,7 +27,6 @@
 
 static constexpr unsigned int PPB_BUF_SIZE = 64;
 static constexpr unsigned int PPII_BUF_SIZE = 40;
-static constexpr unsigned int PPT_BUF_SIZE = 32;
 
 static constexpr unsigned int IEXEC  = 0000100;
 static constexpr unsigned int IWRITE = 0000200;

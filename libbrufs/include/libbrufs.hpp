@@ -32,3 +32,4 @@
 #include "InodeHeaderBuilder.hpp"
 #include "EntityCreator.hpp"
 #include "DynamicDirectoryEntry.hpp"
+#include "PrettyPrint.hpp"

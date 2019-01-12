@@ -33,6 +33,7 @@ set(TEST_FILES
     test/Root.cpp
     test/InodeCrud.cpp
     test/EntityCreator.cpp
+    test/File.cpp
 )
 
 configure_file(cmake/config.hpp.in config.hpp)

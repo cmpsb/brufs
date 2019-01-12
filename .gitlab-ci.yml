@@ -15,7 +15,7 @@ test-debug:
     - brufscli/brufs version
     - libbrufs/test_all
     - brufscli/brufscli-test
-    - gcovr -sbr .. --exclude '.*catch.hpp$' --exclude '.*xxhash.*' --exclude '.*libbrufs/test.*' -o /dev/null
+    - gcovr -sbr .. --exclude '.*catch.hpp$' --exclude '.*xxhash.*' --exclude '.*libbrufs/test.*' --exclude '.*brufscli/test.*' -o /dev/null
 
 test-release:
   stage: test

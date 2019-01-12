@@ -24,10 +24,23 @@
 
 #include "MemIO.hpp"
 #include "Brufs.hpp"
+#include "Root.hpp"
+#include "InodeHeader.hpp"
+#include "Inode.hpp"
+#include "File.hpp"
+#include "EntityCreator.hpp"
 
 static constexpr size_t NORMAL_DISK_SIZE = 32 * 1024 * 1024;
+static constexpr Brufs::InodeId INODE_ID = 65536;
 
-TEST_CASE("Brufs initialization", "[lib]") {
+class StaticInodeIdGenerator : public Brufs::InodeIdGenerator {
+public:
+    Brufs::InodeId generate() const override {
+        return INODE_ID;
+    }
+};
+
+TEST_CASE("Can create new entities", "[EntityCreator]") {
     MemIO mem_io(NORMAL_DISK_SIZE);
     Brufs::Disk disk(&mem_io);
     Brufs::Brufs fs(&disk);
@@ -37,22 +50,30 @@ TEST_CASE("Brufs initialization", "[lib]") {
     proto.sc_low_mark = 12;
     proto.sc_high_mark = 24;
 
-    SECTION("Normal init is successful") {
-        auto status = fs.init(proto);
-        CHECK(status == Brufs::Status::OK);
+    REQUIRE(fs.init(proto) == Brufs::Status::OK);
+
+    Brufs::RootHeader root_header;
+    root_header.set_label("root-name");
+
+    Brufs::Root root(fs, root_header);
+    REQUIRE(root.init() == Brufs::Status::OK);
+    REQUIRE(fs.add_root(root) == Brufs::Status::OK);
+
+    Brufs::Inode inode(root);
+    StaticInodeIdGenerator inode_id_generator;
+    Brufs::EntityCreator entity_creator(inode_id_generator);
+
+    Brufs::Path path("root-name", Brufs::Vector<Brufs::String>::of("thing"));
+
+    SECTION("Can create a file") {
+        Brufs::File file(root);
+        Brufs::InodeHeaderBuilder ihb;
+        REQUIRE(entity_creator.create_file(path, ihb, file) == Brufs::Status::OK);
     }
 
-    SECTION("Tiny init fails with very small disk") {
-        mem_io.resize(10 * 4096);
-        auto status = fs.init(proto);
-        CHECK(status != Brufs::Status::OK);
-    }
-
-    SECTION("Init fails with a very low spare cluster watermark") {
-        proto.sc_low_mark = 0;
-        proto.sc_high_mark = 0;
-
-        auto status = fs.init(proto);
-        CHECK(status != Brufs::Status::OK);
+    SECTION("Can create a directory") {
+        Brufs::Directory dir(root);
+        Brufs::InodeHeaderBuilder ihb;
+        REQUIRE(entity_creator.create_directory(path, ihb, dir) == Brufs::Status::OK);
     }
 }

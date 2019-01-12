@@ -20,39 +20,17 @@
  * SOFTWARE.
  */
 
-#include "catch.hpp"
+#include "RootHeader.hpp"
+#include "xxhash/xxhash.h"
 
-#include "MemIO.hpp"
-#include "Brufs.hpp"
+void Brufs::RootHeader::set_label(const Brufs::String &label) {
+    strncpy(this->label, label.c_str(), MAX_LABEL_LENGTH);
+}
 
-static constexpr size_t NORMAL_DISK_SIZE = 32 * 1024 * 1024;
+Brufs::Hash Brufs::RootHeader::hash(const Hash seed) const {
+    char lbl[MAX_LABEL_LENGTH + 1];
+    memcpy(lbl, this->label, MAX_LABEL_LENGTH);
+    lbl[MAX_LABEL_LENGTH] = 0;
 
-TEST_CASE("Brufs initialization", "[lib]") {
-    MemIO mem_io(NORMAL_DISK_SIZE);
-    Brufs::Disk disk(&mem_io);
-    Brufs::Brufs fs(&disk);
-
-    Brufs::Header proto;
-    proto.cluster_size_exp = 12;
-    proto.sc_low_mark = 12;
-    proto.sc_high_mark = 24;
-
-    SECTION("Normal init is successful") {
-        auto status = fs.init(proto);
-        CHECK(status == Brufs::Status::OK);
-    }
-
-    SECTION("Tiny init fails with very small disk") {
-        mem_io.resize(10 * 4096);
-        auto status = fs.init(proto);
-        CHECK(status != Brufs::Status::OK);
-    }
-
-    SECTION("Init fails with a very low spare cluster watermark") {
-        proto.sc_low_mark = 0;
-        proto.sc_high_mark = 0;
-
-        auto status = fs.init(proto);
-        CHECK(status != Brufs::Status::OK);
-    }
+    return XXH64(this->label, strlen(lbl), seed);
 }

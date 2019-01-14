@@ -33,7 +33,7 @@ test:brufscli:
   dependencies:
     - test:libbrufs
   script:
-    - make brufscli-test -j16
+    - make brufscli -j16
     - brufscli/brufs version
     - brufscli/brufscli-test
     - make brufscli-coverage

@@ -34,6 +34,7 @@ test:brufscli:
     - test:libbrufs
   script:
     - make brufscli-exe -j16
+    - make brufscli-test -j16
     - brufscli/brufs version
     - brufscli/brufscli-test
     - make brufscli-coverage

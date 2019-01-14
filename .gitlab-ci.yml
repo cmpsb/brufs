@@ -37,6 +37,10 @@ test:brufscli:
     - brufscli/brufs version
     - brufscli/brufscli-test
     - make brufscli-coverage
+  artifacts:
+    paths:
+      - build/coverage
+    expire_in: 1 week
 
 test:release:
   stage: test-tools

@@ -1,24 +1,45 @@
 image: wukl/brufs-ci
 
 stages:
-  - test
+  - test-library
+  - test-tools
 
-test-debug:
-  stage: test
-  except:
-    - schedules
-  script:
+.test-any:
+  before_script:
     - mkdir build
     - cd build
     - cmake .. -DCMAKE_BUILD_TYPE=Debug -DBRUFS_SANITIZE=OFF
-    - make -j8
-    - brufscli/brufs version
-    - libbrufs/test_all
-    - brufscli/brufscli-test
-    - gcovr -sbr .. --exclude '.*catch.hpp$' --exclude '.*xxhash.*' --exclude '.*libbrufs/test.*' --exclude '.*brufscli/test.*' -o /dev/null
 
-test-release:
-  stage: test
+test:libbrufs:
+  stage: test-library
+  extends: .test-any
+  except:
+    - schedules
+  script:
+    - make libbrufs-test -j16
+    - libbrufs/libbrufs-test
+    - make libbrufs-coverage
+  artifacts:
+    paths:
+      - build/libbrufs/libbrufs.a
+      - build/coverage
+    expire_in: 1 week
+
+test:brufscli:
+  stage: test-tools
+  extends: .test-any
+  except:
+    - schedules
+  dependencies:
+    - test:libbrufs
+  script:
+    - make brufscli-test -j16
+    - brufscli/brufs version
+    - brufscli/brufscli-test
+    - make brufscli-coverage
+
+test:release:
+  stage: test-tools
   only:
     - schedules
   script:
@@ -27,5 +48,5 @@ test-release:
     - cmake .. -DCMAKE_BUILD_TYPE=Release
     - make -j8
     - brufscli/brufs version
-    - libbrufs/test_all
+    - libbrufs/libbrufs-test
     - brufscli/brufscli-test

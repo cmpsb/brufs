@@ -31,3 +31,5 @@ target_link_libraries(brufscli-exe brufscli)
 
 add_executable(brufscli-test ${TEST_FILES})
 target_link_libraries(brufscli-test brufscli catch)
+add_test(NAME test-brufscli COMMAND brufscli-test)
+add_coverage(brufscli)

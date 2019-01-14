@@ -60,6 +60,11 @@ set(BRUFS_VERSION_MAJOR ${PROJECT_VERSION_MAJOR})
 set(BRUFS_VERSION_MINOR ${PROJECT_VERSION_MINOR})
 set(BRUFS_VERSION_PATCH ${PROJECT_VERSION_PATCH})
 
+enable_testing()
+
+include(coverage)
+enable_coverage()
+
 add_subdirectory(lib/slog)
 add_subdirectory(lib/slopt)
 add_subdirectory(lib/catch)

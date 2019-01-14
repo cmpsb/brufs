@@ -58,8 +58,7 @@ install(
     PUBLIC_HEADER DESTINATION include/brufs
 )
 
-enable_testing()
-
-add_executable(test_all ${TEST_FILES})
-target_link_libraries(test_all brufs catch)
-add_test(test_all test_all)
+add_executable(libbrufs-test ${TEST_FILES})
+target_link_libraries(libbrufs-test brufs catch)
+add_test(NAME test-libbrufs COMMAND libbrufs-test)
+add_coverage(libbrufs)

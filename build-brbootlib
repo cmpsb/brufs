@@ -1,0 +1,8 @@
+#!/usr/bin/fish
+
+cmake .. -DBRUFS_SANITIZE=OFF -DBRUFS_NANOSECOND_TIMESTAMP=OFF -DCMAKE_CXX_COMPILER=x86_64-w64-mingw32-gcc
+cmake .. -DBRUFS_SANITIZE=OFF -DBRUFS_NANOSECOND_TIMESTAMP=OFF -DCMAKE_CXX_COMPILER=x86_64-w64-mingw32-gcc -DCMAKE_CXX_FLAGS="-ffreestanding -nostdlib -Wl,-dll -shared -Wl,--subsystem,10 -e efi_main -g"
+make brufs
+
+sudo cp -Rv ../libbrufs/include/* /usr/local/brboot/include/brufs/
+sudo cp -v libbrufs/libbrufs.a /usr/local/brboot/lib/

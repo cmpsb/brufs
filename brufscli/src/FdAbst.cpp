@@ -23,9 +23,13 @@
 #include <cstdio>
 #include <cassert>
 #include <cerrno>
+#include <linux/fs.h>
+#include <sys/ioctl.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
+
+#undef BLOCK_SIZE
 
 #include "FdAbst.hpp"
 
@@ -58,6 +62,14 @@ const char *FdAbst::strstatus(Brufs::SSize eno) const {
 Brufs::Size FdAbst::get_size() const {
     struct stat st;
     fstat(this->file, &st);
+
+    if (S_ISBLK(st.st_mode)) {
+        uint64_t size;
+        int status = ioctl(this->file, BLKGETSIZE64, &size);
+        if (status == -1) return 0;
+
+        return static_cast<Brufs::Size>(size);
+    }
 
     return static_cast<Brufs::Size>(st.st_size);
 }

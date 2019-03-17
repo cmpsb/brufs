@@ -4,6 +4,7 @@ cmake_policy(SET CMP0048 NEW)
 # Settings start here
 
 set(BRUFS_SANITIZE ON CACHE BOOL "Enable GCC sanitizers (only in debug builds)")
+set(BRUFS_GCOV ON CACHE BOOL "Enable GCC coverage (only in debug builds)")
 set(BRUFS_NANOSECOND_TIMESTAMP ON CACHE BOOL "If ON, uses clock_gettime(2); if OFF, uses time(2)")
 
 # Settings end here
@@ -47,7 +48,11 @@ list(APPEND BRUFS_FLAGS "${BUILD_TYPE}")
 if ("${BUILD_TYPE}" STREQUAL "release")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2 -flto -fuse-linker-plugin -DNDEBUG")
 else ()
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -fprofile-arcs -ftest-coverage -fPIC")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g")
+
+    if (BRUFS_GCOV)
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fprofile-arcs -ftest-coverage -fPIC")
+    endif ()
 
     if (BRUFS_SANITIZE)
         list(APPEND BRUFS_FLAGS "sanitize")

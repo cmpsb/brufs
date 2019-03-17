@@ -43,7 +43,7 @@ configure_file(cmake/config.hpp.in config.hpp)
 include_directories(include ${CMAKE_CURRENT_BINARY_DIR})
 
 add_library(brufs STATIC ${SOURCE_FILES})
-target_compile_options(brufs PRIVATE -fno-exceptions)
+target_compile_options(brufs PRIVATE -fno-rtti -fno-exceptions -idirafter /usr/local/uefi-musl/include)
 set_target_properties(brufs PROPERTIES PUBLIC_HEADER
     include/brufs.h
     include/btree.h

@@ -36,6 +36,7 @@ namespace Brufs {
 
 static const Hash CHECKSUM_SEED = HASH_SEED;
 
+#undef BLOCK_SIZE
 static const Size BLOCK_SIZE = 512;
 
 static const Address NULL_BLOCK = 0;

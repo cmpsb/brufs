@@ -12,6 +12,8 @@ set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake/modules")
 
 project(brufs LANGUAGES C CXX)
 
+include(cotire)
+
 include(extract_git_info)
 extract_git_info(WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR})
 if (GIT_TAG_HAS_VERSION)

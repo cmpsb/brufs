@@ -17,6 +17,9 @@ set(SOURCE_FILES
 
 include_directories(${CMAKE_SOURCE_DIR}/libbrufs/include src)
 
+add_definitions(-DFUSE_USE_VERSION=31)
 add_executable(brufuse ${SOURCE_FILES})
 
 target_link_libraries(brufuse brufs uv fuse3)
+
+cotire(brufuse)

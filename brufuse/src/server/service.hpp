@@ -28,7 +28,6 @@
 
 #include <uv.h>
 
-#define FUSE_USE_VERSION 31
 #include <fuse3/fuse_lowlevel.h>
 
 #include "libbrufs.hpp"

@@ -8,7 +8,7 @@ stages:
   before_script:
     - mkdir -p build
     - cd build
-    - cmake .. -DCMAKE_BUILD_TYPE=Debug -DBRUFS_SANITIZE=OFF -BRUFS_GCOV=ON
+    - cmake .. -DCMAKE_BUILD_TYPE=Debug -DBRUFS_SANITIZE=OFF -DBRUFS_GCOV=ON
 
 test:libbrufs:
   stage: test-library

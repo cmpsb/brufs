@@ -1,3 +1,6 @@
+find_package(Fuse3 REQUIRED)
+find_package(Uv REQUIRED)
+
 set(SOURCE_FILES
     src/main.cpp
     src/message-io.cpp
@@ -15,12 +18,12 @@ set(SOURCE_FILES
     src/slopt/opt.c
 )
 
-include_directories(${CMAKE_SOURCE_DIR}/libbrufs/include src)
+include_directories(${CMAKE_SOURCE_DIR}/libbrufs/include src ${Uv_INCLUDE_DIRS} ${Fuse3_INCLUDE_DIRS})
 
 add_definitions(-DFUSE_USE_VERSION=31)
 add_executable(brufuse ${SOURCE_FILES})
 
-target_link_libraries(brufuse brufs uv fuse3)
+target_link_libraries(brufuse brufs ${Uv_LIBRARIES} ${Fuse3_LIBRARIES})
 
 install(TARGETS brufuse RUNTIME DESTINATION bin)
 

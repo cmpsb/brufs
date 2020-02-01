@@ -22,4 +22,6 @@ add_executable(brufuse ${SOURCE_FILES})
 
 target_link_libraries(brufuse brufs uv fuse3)
 
+install(TARGETS brufuse RUNTIME DESTINATION bin)
+
 cotire(brufuse)

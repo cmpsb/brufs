@@ -22,8 +22,9 @@
 
 #pragma once
 
-#include <cstdio>
-#include <cstring>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include "Vector.hpp"
 
@@ -48,7 +49,8 @@ public:
         this->terminate();
     }
 
-    String(const String &other) : Vector(other) {}
+    String(const String &other) = default;
+    auto operator=(const String& other) -> String& = default;
 
     using Vector::operator=;
     using Vector::operator[];

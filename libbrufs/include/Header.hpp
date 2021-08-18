@@ -23,7 +23,7 @@
 
 #include <type_traits>
 
-#include <cstdint>
+#include <stdint.h>
 
 #include "Extent.hpp"
 #include "Version.hpp"

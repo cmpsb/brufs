@@ -23,8 +23,8 @@
 #pragma once
 
 #include <type_traits>
-#include <cstdlib>
-#include <cstring>
+#include <stdlib.h>
+#include <string.h>
 
 #include "types.hpp"
 #include "xxhash/xxhash.h"

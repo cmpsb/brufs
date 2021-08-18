@@ -22,10 +22,10 @@
 
 #pragma once
 
-#include "types.hpp"
+#include "../types.hpp"
 
-#include <cstdio>
-#include <ctime>
+#include <stdio.h>
+#include <time.h>
 
 namespace Brufs::BmTree {
 

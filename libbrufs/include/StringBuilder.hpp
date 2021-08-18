@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include <cstring>
+#include <string.h>
 
 #include "String.hpp"
 

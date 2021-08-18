@@ -51,8 +51,11 @@ install(
 )
 install(DIRECTORY include/ DESTINATION include/brufs)
 
-add_executable(libbrufs-test ${TEST_FILES})
-target_link_libraries(libbrufs-test brufs catch)
-add_test(NAME test-libbrufs COMMAND libbrufs-test)
-add_coverage(libbrufs)
+if (BRUFS_TESTS)
+    add_executable(libbrufs-test ${TEST_FILES})
+    target_link_libraries(libbrufs-test brufs catch)
+    add_test(NAME test-libbrufs COMMAND libbrufs-test)
+    add_coverage(libbrufs)
+endif ()
+
 cotire(brufs)

@@ -22,9 +22,9 @@
 
 #pragma once
 
-#include "types.hpp"
-#include "Brufs.hpp"
-#include "Extent.hpp"
+#include "../types.hpp"
+#include "../Brufs.hpp"
+#include "../Extent.hpp"
 
 namespace Brufs::BmTree {
 

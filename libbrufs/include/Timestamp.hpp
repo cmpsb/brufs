@@ -24,7 +24,7 @@
 
 #include <type_traits>
 
-#include <cstdint>
+#include <stdint.h>
 
 namespace Brufs {
 

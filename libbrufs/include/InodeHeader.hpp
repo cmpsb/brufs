@@ -24,7 +24,7 @@
 
 #include <type_traits>
 
-#include <cstdint>
+#include <stdint.h>
 
 #include "types.hpp"
 #include "Timestamp.hpp"

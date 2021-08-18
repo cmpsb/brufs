@@ -22,7 +22,8 @@
 
 #pragma once
 
-#include <cstdio>
+#include <stdio.h>
+#include <stdlib.h>
 
 #include "../types.hpp"
 #include "../io.hpp"

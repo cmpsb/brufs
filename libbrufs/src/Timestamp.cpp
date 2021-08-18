@@ -20,7 +20,7 @@
  * SOFTWARE.
  */
 
-#include <ctime>
+#include <time.h>
 
 #include "config.hpp"
 #include "Timestamp.hpp"

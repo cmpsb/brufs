@@ -20,8 +20,8 @@
  * SOFTWARE.
  */
 
-#include <cstdio>
-#include <cassert>
+#include <stdio.h>
+#include <assert.h>
 
 #include "config.hpp"
 #include "Version.hpp"

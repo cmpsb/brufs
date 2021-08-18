@@ -3,6 +3,9 @@ cmake_policy(SET CMP0048 NEW)
 
 # Settings start here
 
+set(BRUFS_TESTS ON CACHE BOOL "Build tests")
+set(BRUFSCLI ON CACHE BOOL "Build brufscli (command line tools)")
+set(BRUFUSE ON CACHE BOOL "Build brufuse (fuse3 driver)")
 set(BRUFS_SANITIZE ON CACHE BOOL "Enable GCC sanitizers (only in debug builds)")
 set(BRUFS_NANOSECOND_TIMESTAMP ON CACHE BOOL "If ON, uses clock_gettime(2); if OFF, uses time(2)")
 
@@ -34,7 +37,8 @@ endif ()
 STRING(TIMESTAMP BRUFS_BUILD_DATE UTC)
 
 set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_FLAGS "-Wall -Wextra -pedantic -Wimplicit-fallthrough -march=haswell -mtune=native")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -pedantic -Wimplicit-fallthrough")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra -pedantic -Wimplicit-fallthrough")
 
 if(NOT CMAKE_BUILD_TYPE)
     if ((NOT GIT_BRANCH) OR ("${GIT_BRANCH}" STREQUAL "master"))
@@ -47,9 +51,11 @@ endif()
 string(TOLOWER "${CMAKE_BUILD_TYPE}" BUILD_TYPE)
 list(APPEND BRUFS_FLAGS "${BUILD_TYPE}")
 if ("${BUILD_TYPE}" STREQUAL "release")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2 -flto -fuse-linker-plugin -DNDEBUG")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2 -DNDEBUG")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O2 -DNDEBUG")
 else ()
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g")
 
     if (BRUFS_GCOV)
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fprofile-arcs -ftest-coverage -fPIC")
@@ -66,15 +72,28 @@ set(BRUFS_VERSION_MAJOR ${PROJECT_VERSION_MAJOR})
 set(BRUFS_VERSION_MINOR ${PROJECT_VERSION_MINOR})
 set(BRUFS_VERSION_PATCH ${PROJECT_VERSION_PATCH})
 
-enable_testing()
+if (BRUFS_TESTS)
+    enable_testing()
+endif ()
 
 include(coverage)
 enable_coverage()
 
-add_subdirectory(lib/slog)
-add_subdirectory(lib/slopt)
-add_subdirectory(lib/catch)
+if (BRUFSCLI)
+    add_subdirectory(lib/slog)
+    add_subdirectory(lib/slopt)
+endif ()
+
+if (BRUFS_TESTS)
+    add_subdirectory(lib/catch)
+endif ()
 
 add_subdirectory(libbrufs)
-add_subdirectory(brufscli)
-add_subdirectory(brufuse)
+
+if (BRUFSCLI)
+    add_subdirectory(brufscli)
+endif ()
+
+if (BRUFUSE)
+    add_subdirectory(brufuse)
+endif ()

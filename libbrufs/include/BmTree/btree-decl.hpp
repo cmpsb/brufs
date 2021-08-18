@@ -22,10 +22,9 @@
 
 #pragma once
 
-#include <cassert>
-#include <cstring>
-#include <cstdlib>
-#include <new>
+#include <assert.h>
+#include <string.h>
+#include <stdlib.h>
 
 #include "../Status.hpp"
 #include "../Extent.hpp"

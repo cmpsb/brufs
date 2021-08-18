@@ -20,8 +20,8 @@
  * SOFTWARE.
  */
 
-#include <cstring>
-#include <cassert>
+#include <string.h>
+#include <assert.h>
 
 #include <unistd.h>
 

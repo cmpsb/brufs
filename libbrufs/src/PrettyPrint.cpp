@@ -20,8 +20,8 @@
  * SOFTWARE.
  */
 
-#include <cmath>
-#include <cstring>
+#include <math.h>
+#include <string.h>
 
 #include "PrettyPrint.hpp"
 
@@ -54,11 +54,11 @@ static const char *suffixes[] = {
 Brufs::String Brufs::PrettyPrint::pp_size(__uint128_t bytes) const {
     const long double doubleBytes = bytes;
     const int magnitude = (bytes == 0) ? 0 : 
-            (int) (std::log(doubleBytes) / std::log(1024));
+            (int) (log(doubleBytes) / log(1024));
 
     char buf[PPB_BUF_SIZE];
     snprintf(buf, PPB_BUF_SIZE, "%3.1Lf %s",
-        doubleBytes / std::pow(1024, magnitude), suffixes[magnitude]
+        doubleBytes / pow(1024, magnitude), suffixes[magnitude]
     );
 
     return String(buf);

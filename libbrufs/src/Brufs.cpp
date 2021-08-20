@@ -33,7 +33,8 @@
 #include "Directory.hpp"
 
 static constexpr unsigned long MEGABYTE = 1024 * 1024;
-static constexpr unsigned long INITIAL_FREE_EXTENT_LENGTH = 2 * MEGABYTE;
+static constexpr unsigned long GIGABYTE = 1024 * MEGABYTE;
+static constexpr unsigned long INITIAL_FREE_EXTENT_LENGTH = 4 * GIGABYTE;
 
 struct pl {
     Brufs::RootHeader *coll;

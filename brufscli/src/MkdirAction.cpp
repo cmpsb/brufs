@@ -30,7 +30,10 @@
 
 std::vector<slopt_Option> Brufscli::MkdirAction::get_options() const {
     return {
-        {'p', "parents", SLOPT_DISALLOW_ARGUMENT}
+        {'p', "parents", SLOPT_DISALLOW_ARGUMENT},
+        {'m', "mode", SLOPT_REQUIRE_ARGUMENT},
+        {'u', "owner", SLOPT_REQUIRE_ARGUMENT},
+        {'g', "group", SLOPT_REQUIRE_ARGUMENT}
     };
 }
 
@@ -63,7 +66,7 @@ void Brufscli::MkdirAction::apply_option(
         this->inode_header_builder.with_mode(std::stoi(val, 0, 8));
         break;
 
-    case 'o':
+    case 'u':
         this->inode_header_builder.with_owner(std::stoul(val));
         break;
 
